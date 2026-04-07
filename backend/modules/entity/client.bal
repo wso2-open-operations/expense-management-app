@@ -13,10 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/http;
 
 configurable string hrEntityBaseUrl = ?;
 
 # Shared HTTP client used for HR entity service requests.
+@display {label: "HR Entity REST Service"}
 final http:Client hrClient = check new (hrEntityBaseUrl);

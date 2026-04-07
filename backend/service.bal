@@ -27,21 +27,6 @@ configurable decimal annualClaimLimit = ?;
 configurable decimal claimRangeStep = ?;
 configurable int lastYearClaimGracePeriodInDays = ?;
 
-# Get the configured annual claim limit used for OPD summaries.
-#
-# + return - Annual claim limit
-function getAnnualClaimLimit() returns decimal => annualClaimLimit;
-
-# Get the configured claim range step used for OPD summary charts.
-#
-# + return - Claim range step
-function getClaimRangeStep() returns decimal => claimRangeStep;
-
-# Get the configured grace period length used for previous-year OPD claims.
-#
-# + return - Grace period length in days
-function getLastYearClaimGracePeriodInDays() returns int => lastYearClaimGracePeriodInDays;
-
 final cache:Cache cache = new ({
     capacity: 2000,
     defaultMaxAge: 1800.0,
