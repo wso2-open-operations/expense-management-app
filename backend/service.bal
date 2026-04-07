@@ -56,8 +56,8 @@ service class ErrorInterceptor {
 }
 
 @display {
-    label: "Expense Management App",
-    id: "finance/expense-management-app"
+    label: "Expense Management Dashboard",
+    id: "finance/expense-management-dashboard"
 }
 service http:InterceptableService / on new http:Listener(9090) {
 
