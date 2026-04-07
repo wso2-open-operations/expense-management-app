@@ -41,9 +41,6 @@ public type AppConfig record {|
 
     # Allowed employee locations for claim submissions
     string[] submissionsAllowedLocations;
-
-    # Number of grace days allowed for previous year claims
-    int lastYearClaimGracePeriodInDays;
 |};
 
 # Claim distribution bucket used by OPD summary responses.
