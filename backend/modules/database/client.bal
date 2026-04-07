@@ -17,17 +17,7 @@ import ballerinax/mysql;
 import ballerinax/mysql.driver as _;
 
 configurable decimal connectTimeout = ?;
-configurable decimal annualClaimLimit = ?;
-configurable decimal claimRangeStep = ?;
-configurable int lastYearClaimGracePeriodInDays = ?;
 configurable DatabaseConfig expenseDatabaseConfig = ?;
-
-# Database health check query result.
-#
-# + status - field description
-type HealthCheckRow record {|
-    int status;
-|};
 
 final mysql:Options expenseDbOptions = {
     ssl: {
@@ -46,63 +36,13 @@ public final mysql:Client expenseDbClient = check new (
     expenseDatabaseConfig.connectionPool
 );
 
-boolean expenseDbHealthy = false;
-string? expenseDbStatusMessage = ();
-
-# Refresh the cached health status of the expense database.
-function refreshExpenseDbHealth() {
-    HealthCheckRow|error healthCheckResult = expenseDbClient->queryRow(`SELECT 1 AS status`, HealthCheckRow);
-    lock {
-        if healthCheckResult is error {
-            expenseDbHealthy = false;
-            expenseDbStatusMessage = healthCheckResult.message();
-            return;
-        }
-
-        expenseDbHealthy = true;
-        expenseDbStatusMessage = ();
+# Check the health of the expense database.
+#
+# + return - Error message if unhealthy, or null if healthy
+public function getDatabaseHealth() returns string? {
+    record {}|error result = expenseDbClient->queryRow(`SELECT 1 AS status`);
+    if result is error {
+        return result.message();
     }
+    return ();
 }
-
-# Get the health status of the expense database dependency.
-#
-# + return - Health information for the expense database, or an error if the health check process itself fails
-public function getDatabaseHealth() returns json|error {
-    refreshExpenseDbHealth();
-
-    lock {
-        return {
-            healthy: expenseDbHealthy,
-            dependencies: {
-                expenseDb: {
-                    healthy: expenseDbHealthy,
-                    message: expenseDbStatusMessage
-                }
-            }
-        };
-    }
-}
-
-# Check whether the expense database dependency is currently healthy.
-#
-# + return - `true` if the expense database is healthy, otherwise `false`
-public function isDatabaseHealthy() returns boolean {
-    lock {
-        return expenseDbHealthy;
-    }
-}
-
-# Get the configured annual claim limit used for OPD summaries.
-#
-# + return - Annual claim limit
-public function getAnnualClaimLimit() returns decimal => annualClaimLimit;
-
-# Get the configured claim range step used for OPD summary charts.
-#
-# + return - Claim range step
-public function getClaimRangeStep() returns decimal => claimRangeStep;
-
-# Get the configured grace period length used for previous-year OPD claims.
-#
-# + return - Grace period length in days
-public function getLastYearClaimGracePeriodInDays() returns int => lastYearClaimGracePeriodInDays;

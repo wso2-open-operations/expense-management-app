@@ -23,6 +23,24 @@ import ballerina/log;
 import ballerina/time;
 
 public configurable AppConfig appConfig = ?;
+configurable decimal annualClaimLimit = ?;
+configurable decimal claimRangeStep = ?;
+configurable int lastYearClaimGracePeriodInDays = ?;
+
+# Get the configured annual claim limit used for OPD summaries.
+#
+# + return - Annual claim limit
+function getAnnualClaimLimit() returns decimal => annualClaimLimit;
+
+# Get the configured claim range step used for OPD summary charts.
+#
+# + return - Claim range step
+function getClaimRangeStep() returns decimal => claimRangeStep;
+
+# Get the configured grace period length used for previous-year OPD claims.
+#
+# + return - Grace period length in days
+function getLastYearClaimGracePeriodInDays() returns int => lastYearClaimGracePeriodInDays;
 
 final cache:Cache cache = new ({
     capacity: 2000,
@@ -189,22 +207,16 @@ service http:InterceptableService / on new http:Listener(9090) {
     # Get the health status of the service and its database dependency.
     #
     # + return - Health status response for the service
-    resource function get health() returns json|http:InternalServerError {
-        json|error databaseHealth = database:getDatabaseHealth();
-        if databaseHealth is error {
-            log:printError("Health check process failed.", databaseHealth);
-            return <http:InternalServerError>{
-                body: {
-                    message: "Health check process failed."
-                }
-            };
-        }
-
-        string status = database:isDatabaseHealthy() ? "ok" : "degraded";
+    resource function get health() returns json {
+        string? dbError = database:getDatabaseHealth();
+        string status = dbError is () ? "ok" : "degraded";
 
         return {
             status: status,
-            database: databaseHealth
+            database: {
+                healthy: dbError is (),
+                message: dbError
+            }
         };
     }
 }
