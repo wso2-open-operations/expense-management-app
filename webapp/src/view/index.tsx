@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import { type ComponentType, type LazyExoticComponent, Suspense, lazy } from "react";
 
 import AppSkeleton from "@component/common/AppSkeleton";
@@ -32,15 +31,15 @@ const withSuspense = (Component: AnyComponent) => {
   };
 };
 
-const dashboard = withSuspense(lazy(() => import("@root/src/view/dashboard/dashboard")));
-const opd = withSuspense(lazy(() => import("@root/src/view/opd/opd")));
-const expense = withSuspense(lazy(() => import("@root/src/view/expense/expense")));
-const employees = withSuspense(lazy(() => import("@root/src/view/employees/employees")));
-const card = withSuspense(lazy(() => import("@root/src/view/credit-cards/credit")));
-const settings = withSuspense(lazy(() => import("@root/src/view/settings/settings")));
-const reports = withSuspense(lazy(() => import("@root/src/view/reports/reports")));
-const admin = withSuspense(lazy(() => import("@root/src/view/admin-panel/admin")));
-const profile = withSuspense(lazy(() => import("@root/src/view/profile/profile")));
+const dashboard = withSuspense(lazy(() => import("@root/src/view/dashboard/Dashboard")));
+const opd = withSuspense(lazy(() => import("@root/src/view/opd/Opd")));
+const expense = withSuspense(lazy(() => import("@root/src/view/expense/Expense")));
+const employees = withSuspense(lazy(() => import("@root/src/view/employees/Employees")));
+const card = withSuspense(lazy(() => import("@root/src/view/credit-cards/Credit")));
+const settings = withSuspense(lazy(() => import("@root/src/view/settings/Settings")));
+const reports = withSuspense(lazy(() => import("@root/src/view/reports/Reports")));
+const admin = withSuspense(lazy(() => import("@root/src/view/admin-panel/Admin")));
+const profile = withSuspense(lazy(() => import("@root/src/view/profile/Profile")));
 
 export const View = {
   dashboard,
@@ -51,5 +50,5 @@ export const View = {
   reports,
   settings,
   admin,
-  profile
+  profile,
 };
