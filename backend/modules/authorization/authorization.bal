@@ -50,12 +50,39 @@ public isolated service class JwtInterceptor {
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        CustomJwtPayload|error userInfo = result[1].cloneWithType(CustomJwtPayload);
-        if userInfo is error {
+        // Convert the decoded payload to a plain JSON map so custom claims
+        // (email, groups) are accessed as json rather than anydata, avoiding
+        // cloneWithType failures when groups is a json[] or absent.
+        json payloadJson = result[1].toJson();
+        if payloadJson !is map<json> {
             string errorMsg = "Malformed Invoker info object!";
-            log:printError(errorMsg, userInfo);
+            log:printError(errorMsg + ": JWT payload is not a JSON object");
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
+        map<json> claims = payloadJson;
+
+        // email is required
+        json emailClaim = claims["email"];
+        if emailClaim !is string {
+            string errorMsg = "Malformed Invoker info object!";
+            log:printError(errorMsg + ": 'email' claim missing or not a string");
+            return <http:InternalServerError>{body: {message: errorMsg}};
+        }
+
+        // groups may be a json array, a bare string, or absent — handle all cases
+        string[] groups = [];
+        json groupsClaim = claims["groups"];
+        if groupsClaim is json[] {
+            foreach json g in groupsClaim {
+                if g is string {
+                    groups.push(g);
+                }
+            }
+        } else if groupsClaim is string {
+            groups = [groupsClaim];
+        }
+
+        CustomJwtPayload userInfo = {email: emailClaim, groups: groups};
 
         foreach anydata role in authorizedRoles.toArray() {
             if userInfo.groups.some(r => r === role) {
