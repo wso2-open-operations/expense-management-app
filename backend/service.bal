@@ -104,11 +104,12 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
         }
 
+        string[] groupsList = userInfo.groups is string[] ? <string[]>userInfo.groups : [<string>userInfo.groups];
         int[] privileges = [];
-        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], userInfo.groups) {
+        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], groupsList) {
             privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
         }
-        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], userInfo.groups) {
+        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], groupsList) {
             privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
         }
 
@@ -172,9 +173,9 @@ service http:InterceptableService / on new http:Listener(9090) {
         int effectiveMonth = month ?: civilTime.month;
 
         OpdClaimSummaryResponse|error summary = getOpdClaimSummary(
-            effectiveYear,
-            effectiveMonth,
-            months
+                effectiveYear,
+                effectiveMonth,
+                months
         );
         if summary is error {
             string customError = "Failed to build OPD claim summary.";

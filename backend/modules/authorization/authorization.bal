@@ -33,6 +33,7 @@ public isolated service class JwtInterceptor {
         returns http:NextService|http:Forbidden|http:InternalServerError|error? {
 
         string|error idToken = req.getHeader(JWT_ASSERTION_HEADER);
+        
         if idToken is error {
             string errorMsg = "Missing invoker info header!";
             log:printError(errorMsg, idToken);
@@ -50,42 +51,16 @@ public isolated service class JwtInterceptor {
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        // Convert the decoded payload to a plain JSON map so custom claims
-        // (email, groups) are accessed as json rather than anydata, avoiding
-        // cloneWithType failures when groups is a json[] or absent.
-        json payloadJson = result[1].toJson();
-        if payloadJson !is map<json> {
+        CustomJwtPayload|error userInfo = result[1].cloneWithType(CustomJwtPayload);
+        if userInfo is error {
             string errorMsg = "Malformed Invoker info object!";
-            log:printError(errorMsg + ": JWT payload is not a JSON object");
-            return <http:InternalServerError>{body: {message: errorMsg}};
-        }
-        map<json> claims = payloadJson;
-
-        // email is required
-        json emailClaim = claims["email"];
-        if emailClaim !is string {
-            string errorMsg = "Malformed Invoker info object!";
-            log:printError(errorMsg + ": 'email' claim missing or not a string");
+            log:printError(errorMsg, userInfo);
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        // groups may be a json array, a bare string, or absent — handle all cases
-        string[] groups = [];
-        json groupsClaim = claims["groups"];
-        if groupsClaim is json[] {
-            foreach json g in groupsClaim {
-                if g is string {
-                    groups.push(g);
-                }
-            }
-        } else if groupsClaim is string {
-            groups = [groupsClaim];
-        }
-
-        CustomJwtPayload userInfo = {email: emailClaim, groups: groups};
-
+        string[] groupsList = userInfo.groups is string[] ? <string[]>userInfo.groups : [<string>userInfo.groups];
         foreach anydata role in authorizedRoles.toArray() {
-            if userInfo.groups.some(r => r === role) {
+            if groupsList.some(r => r === role) {
                 ctx.set(HEADER_USER_INFO, userInfo);
                 return ctx.next();
             }

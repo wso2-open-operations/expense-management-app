@@ -19,7 +19,7 @@ public type CustomJwtPayload record {
     # Work email address of the authenticated user.
     string email;
     # Group or role names assigned to the authenticated user.
-    string[] groups = [];
+    string|string[] groups = [];
 };
 
 # Application-specific role names used for authorization checks.
