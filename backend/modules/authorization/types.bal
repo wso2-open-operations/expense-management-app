@@ -16,16 +16,24 @@
 
 # User information extracted from the Asgardeo JWT assertion.
 public type CustomJwtPayload record {
-    # Work email address of the authenticated user.
+    # Work email address of the authenticated user
     string email;
-    # Group or role names assigned to the authenticated user.
+    # Group or role names assigned to the authenticated user
     string|string[] groups = [];
 };
 
+# Normalized user information stored in the request context after JWT validation.
+public type UserInfo record {|
+    # Work email address of the authenticated user
+    string email;
+    # Normalized group names assigned to the authenticated user
+    string[] groups = [];
+|};
+
 # Application-specific role names used for authorization checks.
 public type AppRoles record {|
-    # Role granted to employees.
+    # Role granted to employees
     string employeeRole;
-    # Role granted to finance administrators.
+    # Role granted to finance administrators
     string financeAdminRole;
 |};

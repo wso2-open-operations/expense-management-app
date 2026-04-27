@@ -26,42 +26,42 @@ public enum OpdClaimStatus {
 
 # Configurable database connection settings.
 public type DatabaseConfig record {|
-    # Host name or IP address of the database server.
+    # Host name or IP address of the database server
     string host;
-    # User name used to connect to the database.
+    # User name used to connect to the database
     string user;
-    # Password used to connect to the database.
+    # Password used to connect to the database
     string password;
-    # Name of the target database schema.
+    # Name of the target database schema
     string database;
-    # Port used by the database server.
+    # Port used by the database server
     int port = 3306;
-    # Connection pool settings for the database client.
+    # Connection pool settings for the database client
     sql:ConnectionPool connectionPool = {};
 |};
 
 # Query result containing a single aggregated decimal total.
 public type AmountRow record {|
-    # Aggregated total amount returned by the query.
+    # Aggregated total amount returned by the query
     decimal total;
 |};
 
 # Query result containing a single aggregated count.
 public type CountRow record {|
-    # Aggregated count returned by the query.
+    # Aggregated count returned by the query
     int count;
 |};
 
 # Query result containing an employee email.
 public type EmployeeEmailRow record {|
-    # Employee work email associated with a claim.
+    # Employee work email associated with a claim
     string employeeEmail;
 |};
 
 # Query result containing a claim total for an employee.
 public type EmployeeTotalRow record {|
-    # Employee work email associated with the total.
+    # Employee work email associated with the total
     string employeeEmail;
-    # Total claim amount calculated for the employee.
+    # Total claim amount calculated for the employee
     decimal totalAmount;
 |};

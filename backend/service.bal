@@ -77,7 +77,7 @@ service http:InterceptableService / on new http:Listener(9090) {
     # + ctx - Request context containing authenticated user information
     # + return - User information response if successful, otherwise an internal server error
     resource function get user\-info(http:RequestContext ctx) returns UserInfoResponse|http:InternalServerError {
-        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:InternalServerError>{
                 body: {
@@ -104,12 +104,11 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
         }
 
-        string[] groupsList = userInfo.groups is string[] ? <string[]>userInfo.groups : [<string>userInfo.groups];
         int[] privileges = [];
-        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], groupsList) {
+        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], userInfo.groups) {
             privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
         }
-        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], groupsList) {
+        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], userInfo.groups) {
             privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
         }
 
@@ -132,7 +131,7 @@ service http:InterceptableService / on new http:Listener(9090) {
     resource function get opd\-claims(http:RequestContext ctx, int? year = (), int? month = (), int months = 1)
         returns OpdClaimSummaryResponse|http:BadRequest|HttpInternalServerError {
 
-        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:BadRequest>{
                 body: {
