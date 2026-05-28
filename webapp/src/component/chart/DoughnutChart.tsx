@@ -30,6 +30,7 @@ export interface DoughnutChartProps {
   formatValue?: (value: number) => string;
   centerLabel?: string;
   centerValue?: string;
+  colors?: string[];
   onItemClick?: (item: DoughnutChartItem, index: number) => void;
   tooltipContent?: (item: DoughnutChartItem, index: number) => ReactNode;
 }
@@ -52,6 +53,7 @@ export default function DoughnutChart({
   formatValue = (value) => value.toLocaleString(),
   centerLabel,
   centerValue,
+  colors,
   onItemClick,
   tooltipContent,
 }: DoughnutChartProps) {
@@ -75,9 +77,10 @@ export default function DoughnutChart({
 
       cumulativeRatio += ratio;
 
+      const palette = colors ?? SEGMENT_COLORS;
       return {
         ...item,
-        color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+        color: palette[index % palette.length],
         dashLength,
         dashOffset,
       };
@@ -91,7 +94,7 @@ export default function DoughnutChart({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "minmax(280px, 340px) 1fr" },
+        gridTemplateColumns: { xs: "1fr", md: `${size}px 1fr` },
         gap: 3,
         alignItems: "center",
       }}
@@ -208,7 +211,7 @@ export default function DoughnutChart({
                   width: 12,
                   height: 12,
                   borderRadius: "50%",
-                  bgcolor: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+                  bgcolor: (colors ?? SEGMENT_COLORS)[index % (colors ?? SEGMENT_COLORS).length],
                 }}
               />
               <Box sx={{ minWidth: 0 }}>

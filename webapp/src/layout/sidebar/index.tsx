@@ -24,6 +24,7 @@ import SidebarNavItem from "@component/layout/SidebarNavItem";
 import pJson from "@root/package.json";
 import { ColorModeContext } from "@src/App";
 import { getActiveRouteDetails } from "@src/route";
+import { useViewMode } from "@context/ViewModeContext";
 
 interface SidebarProps {
   open: boolean;
@@ -34,6 +35,7 @@ interface SidebarProps {
 
 const Sidebar = (props: SidebarProps) => {
   const allRoutes = useMemo(() => getActiveRouteDetails(props.roles), [props.roles]);
+  const { viewMode, setViewMode } = useViewMode();
 
   const [navState, setNavState] = useState<NavState>({
     active: null,
@@ -149,6 +151,85 @@ const Sidebar = (props: SidebarProps) => {
               overflow: "visible",
             }}
           >
+            {/* View mode toggle */}
+            <Box sx={{ mb: 1, width: props.open ? "100%" : "fit-content" }}>
+              {props.open ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    borderRadius: 1.5,
+                    border: "1px solid",
+                    borderColor: theme.palette.customNavigation?.clickedBg ?? "divider",
+                    overflow: "hidden",
+                    width: "100%",
+                  }}
+                >
+                  {(["admin", "employee", "lead"] as const).map((mode) => (
+                    <Box
+                      key={mode}
+                      component="button"
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      sx={{
+                        flex: 1,
+                        py: 0.7,
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        textTransform: "capitalize",
+                        transition: "all 0.15s ease",
+                        bgcolor: viewMode === mode
+                          ? theme.palette.primary?.main ?? "#f97316"
+                          : "transparent",
+                        color: viewMode === mode
+                          ? "#fff"
+                          : theme.palette.customNavigation?.text ?? "text.secondary",
+                        "&:hover": viewMode !== mode ? {
+                          bgcolor: theme.palette.customNavigation?.hoverBg ?? "action.hover",
+                        } : {},
+                      }}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Tooltip
+                  title={`View: ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}`}
+                  placement="right"
+                  arrow
+                >
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => {
+                      const modes = ["admin", "employee", "lead"] as const;
+                      const next = modes[(modes.indexOf(viewMode) + 1) % modes.length];
+                      setViewMode(next);
+                    }}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      bgcolor: theme.palette.primary?.main ?? "#f97316",
+                      color: "#fff",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {viewMode.charAt(0).toUpperCase()}
+                  </Box>
+                </Tooltip>
+              )}
+            </Box>
+
             <Stack
               direction="column"
               gap={1}

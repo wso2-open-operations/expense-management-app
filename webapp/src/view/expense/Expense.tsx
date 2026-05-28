@@ -13,8 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useViewMode } from "@context/ViewModeContext";
+
 import ExpenseClaims from "./panel/expenseClaims";
+import MyExpenseClaims from "./panel/MyExpenseClaims";
 
 export default function Expense() {
-  return <ExpenseClaims />;
+  const { viewMode } = useViewMode();
+  return viewMode === "admin" ? <ExpenseClaims /> : <MyExpenseClaims />;
 }

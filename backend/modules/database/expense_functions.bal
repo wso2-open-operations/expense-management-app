@@ -35,10 +35,10 @@ isolated function validateDateRangeInputs(int month, int monthRange, int? 'limit
 # + businessUnit - Optional business unit filter
 # + return - Expense summary stats if the query succeeds, otherwise an error
 public function queryExpenseSummaryStats(int year, int month, int monthRange,
-        string? businessUnit = ()) returns ExpenseSummaryStatsRow|error {
+        string? businessUnit = (), string? email = ()) returns ExpenseSummaryStatsRow|error {
     check validateDateRangeInputs(month, monthRange);
     return expenseDbClient->queryRow(
-        getExpenseSummaryStatsQuery(year, month, monthRange, businessUnit)
+        getExpenseSummaryStatsQuery(year, month, monthRange, businessUnit, email)
     );
 }
 

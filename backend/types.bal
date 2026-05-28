@@ -412,6 +412,30 @@ public type AppConfigUpdateRequest record {|
 |};
 
 # Standard error payload returned to API clients.
+# Consolidated expense summary statistics for the authenticated employee's own claims.
+public type ExpenseSummaryStatsResponse record {|
+    # Total reimbursement amount.
+    decimal totalAmount;
+    # Total number of claims.
+    int totalCount;
+    # Average reimbursement amount.
+    decimal avgAmount;
+    # Number of approved claims.
+    int approvedCount;
+    # Number of pending claims (submitted or awaiting lead approval).
+    int pendingCount;
+    # Number of rejected claims.
+    int rejectedCount;
+|};
+
+# OPD claim summary for the authenticated employee for a given year.
+public type MyOpdSummaryResponse record {|
+    # Total amount claimed in OPD transactions.
+    decimal claimedAmount;
+    # Total number of distinct OPD claims.
+    int claimCount;
+|};
+
 public type ErrorResponse record {|
     # Client-safe error message.
     string message;

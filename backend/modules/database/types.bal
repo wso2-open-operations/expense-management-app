@@ -200,6 +200,14 @@ public type EmployeeCategoryTransactionRow record {|
     string status;
 |};
 
+# Query result for an employee's personal OPD claim summary.
+public type MyOpdSummaryRow record {|
+    # Total amount claimed in OPD transactions.
+    decimal claimedAmount;
+    # Total number of distinct OPD claims.
+    int claimCount;
+|};
+
 # Query result for a single application setting key-value pair.
 public type AppSettingRow record {|
     # Setting identifier

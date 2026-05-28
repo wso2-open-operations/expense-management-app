@@ -22,6 +22,7 @@ import AppHandler from "@app/AppHandler";
 import { AsgardeoConfig } from "@config/config";
 import AppAuthProvider from "@context/AuthContext";
 import { ThemeContextProvider, useAppTheme } from "@context/ThemeContext";
+import { ViewModeContextProvider } from "@context/ViewModeContext";
 import { store } from "@slices/store";
 
 import "./styles/fonts.css";
@@ -48,7 +49,9 @@ export default function App() {
   return (
     <Provider store={store}>
       <ThemeContextProvider>
-        <ThemedApp />
+        <ViewModeContextProvider>
+          <ThemedApp />
+        </ViewModeContextProvider>
       </ThemeContextProvider>
     </Provider>
   );

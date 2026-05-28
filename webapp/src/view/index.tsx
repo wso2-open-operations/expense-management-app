@@ -40,7 +40,6 @@ const settings = withSuspense(lazy(() => import("@root/src/view/settings/Setting
 const reports = withSuspense(lazy(() => import("@root/src/view/reports/Reports")));
 const admin = withSuspense(lazy(() => import("@root/src/view/admin-panel/Admin")));
 const profile = withSuspense(lazy(() => import("@root/src/view/profile/Profile")));
-
 export const View = {
   dashboard,
   opd,

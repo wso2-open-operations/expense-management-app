@@ -30,6 +30,8 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 
 import Logo from "@assets/images/pulse-orange.svg";
+import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
+import { useViewMode } from "@context/ViewModeContext";
 import { Role } from "@slices/authSlice/auth";
 import { RootState, useAppSelector } from "@slices/store";
 import { getActiveRouteDetails } from "@src/route";
@@ -65,6 +67,7 @@ function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const { viewMode, setViewMode } = useViewMode();
 
   const { signOut, state: authState } = useAuthContext();
   const employeeInfo = useAppSelector((state) => state.user.userInfo);
@@ -138,6 +141,15 @@ function Layout() {
           </Header.Brand>
           <Header.Spacer />
           <Header.Actions>
+            <ChartPeriodFilter
+              value={viewMode}
+              options={[
+                { value: "admin", label: "Admin View" },
+                { value: "employee", label: "Employee View" },
+                { value: "lead", label: "Lead View" },
+              ]}
+              onChange={(v) => setViewMode(v as "admin" | "employee" | "lead")}
+            />
             <ColorSchemeToggle />
             <UserMenu>
               <UserMenu.Trigger name={userName} avatar={profileImage ?? undefined} />

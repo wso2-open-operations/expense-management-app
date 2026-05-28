@@ -60,7 +60,7 @@ isolated function getExpenseDateRangeClause(int year, int month, int monthRange)
 # + businessUnit - Optional business unit filter
 # + return - Parameterized SQL query
 isolated function getExpenseSummaryStatsQuery(int year, int month, int monthRange,
-        string? businessUnit = ()) returns sql:ParameterizedQuery {
+        string? businessUnit = (), string? email = ()) returns sql:ParameterizedQuery {
 
     sql:ParameterizedQuery baseQuery = `
         SELECT COALESCE(SUM(CAST(ec.reimbursement_amount AS DECIMAL(10,2))), 0) AS totalAmount,
@@ -77,6 +77,9 @@ isolated function getExpenseSummaryStatsQuery(int year, int month, int monthRang
 
     if businessUnit is string {
         query = sql:queryConcat(query, ` AND ec.business_unit = ${businessUnit}`);
+    }
+    if email is string {
+        query = sql:queryConcat(query, ` AND ec.employee_email = ${email}`);
     }
 
     return query;

@@ -575,6 +575,198 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
     }
 
+    # Get the authenticated employee's own expense claim summary statistics.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + year - Optional reporting year (defaults to current year)
+    # + month - Optional reporting month (defaults to current month)
+    # + monthRange - Number of months in the reporting window; 0 = all time
+    # + return - Expense summary stats for the caller if successful, otherwise an HTTP error response
+    resource function get my\-expense\-summary(http:RequestContext ctx, int? year = (), int? month = (),
+            int monthRange = 0, string? testEmail = ())
+        returns ExpenseSummaryStatsResponse|http:BadRequest|HttpInternalServerError {
+
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return authResult;
+        }
+
+        http:BadRequest? validationError = validateCCDateParams(year, month, monthRange);
+        if validationError is http:BadRequest {
+            return validationError;
+        }
+
+        [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, month);
+        if dateResult is HttpInternalServerError {
+            return dateResult;
+        }
+        int effectiveYear = dateResult[0];
+        int effectiveMonth = dateResult[1];
+        string callerEmail = testEmail ?: authResult.email;
+
+        database:ExpenseSummaryStatsRow|error stats = database:queryExpenseSummaryStats(
+                effectiveYear, effectiveMonth, monthRange, email = callerEmail
+        );
+        if stats is error {
+            string customError = "Failed to fetch personal expense summary.";
+            log:printError(customError, stats);
+            return <HttpInternalServerError>{body: {message: customError}};
+        }
+
+        return {
+            totalAmount: stats.totalAmount,
+            totalCount: stats.totalCount,
+            avgAmount: stats.avgAmount,
+            approvedCount: stats.approvedCount,
+            pendingCount: stats.pendingCount,
+            rejectedCount: stats.rejectedCount
+        };
+    }
+
+    # Get the authenticated employee's own expense category breakdown.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + year - Optional reporting year (defaults to current year)
+    # + month - Optional reporting month (defaults to current month)
+    # + monthRange - Number of months in the reporting window; 0 = all time
+    # + statusFilter - Optional status group filter: "Approved" or "Pending"
+    # + return - Expense category breakdown for the caller if successful, otherwise an HTTP error response
+    resource function get my\-expense\-breakdown(http:RequestContext ctx, int? year = (), int? month = (),
+            int monthRange = 0, string? statusFilter = (), string? testEmail = ())
+        returns EmployeeSpendingBreakdownResponse|http:BadRequest|HttpInternalServerError {
+
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return authResult;
+        }
+
+        [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, month);
+        if dateResult is HttpInternalServerError {
+            return dateResult;
+        }
+        int effectiveYear = dateResult[0];
+        int effectiveMonth = dateResult[1];
+        string? effectiveStatusFilter = (statusFilter is string && statusFilter.trim().length() == 0) ? () : statusFilter;
+        string callerEmail = testEmail ?: authResult.email;
+
+        database:EmployeeCategoryRow[]|error catRows = database:queryEmployeeCategoryBreakdown(
+                callerEmail, effectiveYear, effectiveMonth, monthRange, effectiveStatusFilter
+        );
+        if catRows is error {
+            string customError = "Failed to fetch personal expense breakdown.";
+            log:printError(customError, catRows);
+            return <HttpInternalServerError>{body: {message: customError}};
+        }
+
+        decimal grandTotal = 0.0d;
+        int totalClaims = 0;
+        foreach database:EmployeeCategoryRow r in catRows {
+            grandTotal = grandTotal + r.total;
+            totalClaims = totalClaims + r.claimCount;
+        }
+
+        EmployeeCategoryItem[] categories = from database:EmployeeCategoryRow row in catRows
+            select {
+                category: row.category,
+                total: row.total,
+                claimCount: row.claimCount,
+                percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
+            };
+
+        string empName = deriveDisplayName(callerEmail);
+        entity:Employee|error empEmployee = entity:fetchEmployeesBasicInfo(callerEmail);
+        if empEmployee is entity:Employee {
+            empName = empEmployee.firstName + " " + empEmployee.lastName;
+        }
+
+        return {
+            name: empName,
+            email: callerEmail,
+            totalAmount: grandTotal,
+            claimCount: totalClaims,
+            categories: categories
+        };
+    }
+
+    # Get the authenticated employee's own expense transactions within a category.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + category - Expense category label
+    # + year - Optional reporting year (defaults to current year)
+    # + month - Optional reporting month (defaults to current month)
+    # + monthRange - Number of months in the reporting window; 0 = all time
+    # + statusFilter - Optional status group filter: "Approved" or "Pending"
+    # + return - Transaction list for the caller if successful, otherwise an HTTP error response
+    resource function get my\-expense\-transactions(http:RequestContext ctx, string category,
+            int? year = (), int? month = (), int monthRange = 0, string? statusFilter = (), string? testEmail = ())
+        returns EmployeeCategoryTransactionItem[]|http:BadRequest|HttpInternalServerError {
+
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return authResult;
+        }
+
+        if category.trim().length() == 0 {
+            return <http:BadRequest>{body: {message: "Category is required."}};
+        }
+
+        [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, month);
+        if dateResult is HttpInternalServerError {
+            return dateResult;
+        }
+        int effectiveYear = dateResult[0];
+        int effectiveMonth = dateResult[1];
+        string? effectiveStatusFilter = (statusFilter is string && statusFilter.trim().length() == 0) ? () : statusFilter;
+        string callerEmail = testEmail ?: authResult.email;
+
+        database:EmployeeCategoryTransactionRow[]|error txnRows = database:queryEmployeeCategoryTransactions(
+                callerEmail, category, effectiveYear, effectiveMonth, monthRange, effectiveStatusFilter
+        );
+        if txnRows is error {
+            string customError = "Failed to fetch personal expense transactions.";
+            log:printError(customError, txnRows);
+            return <HttpInternalServerError>{body: {message: customError}};
+        }
+
+        return from database:EmployeeCategoryTransactionRow row in txnRows
+            select {
+                description: row.description,
+                txnDate: row.txnDate,
+                amount: row.amount,
+                status: row.status
+            };
+    }
+
+    # Get the authenticated employee's own OPD claim summary for a given year.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + year - Optional reporting year (defaults to current year)
+    # + return - OPD summary for the caller if successful, otherwise an HTTP error response
+    resource function get my\-opd\-summary(http:RequestContext ctx, int? year = (), string? testEmail = ())
+        returns MyOpdSummaryResponse|http:BadRequest|HttpInternalServerError {
+
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return authResult;
+        }
+
+        [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, ());
+        if dateResult is HttpInternalServerError {
+            return dateResult;
+        }
+        int effectiveYear = dateResult[0];
+        string callerEmail = testEmail ?: authResult.email;
+
+        database:MyOpdSummaryRow|error opdStats = database:queryMyOpdSummary(callerEmail, effectiveYear);
+        if opdStats is error {
+            string customError = "Failed to fetch personal OPD summary.";
+            log:printError(customError, opdStats);
+            return <HttpInternalServerError>{body: {message: customError}};
+        }
+
+        return {claimedAmount: opdStats.claimedAmount, claimCount: opdStats.claimCount};
+    }
+
     # Get the lead approval frequency list for the requested reporting period.
     #
     # + ctx - Request context containing authenticated user information

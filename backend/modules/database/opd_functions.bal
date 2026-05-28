@@ -60,6 +60,15 @@ public function queryAllClaimEmployeeEmails() returns string[]|error {
         select row.employeeEmail.toLowerAscii();
 }
 
+# Query an employee's personal OPD summary for a given year.
+#
+# + email - Employee email to filter on
+# + year - Reporting year
+# + return - OPD summary row if the query succeeds, otherwise an error
+public function queryMyOpdSummary(string email, int year) returns MyOpdSummaryRow|error {
+    return expenseDbClient->queryRow(getMyOpdSummaryQuery(email, year));
+}
+
 # Query total claim amounts per employee for the selected reporting range.
 #
 # + year - Year used for the reporting range

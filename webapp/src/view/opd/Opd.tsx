@@ -13,9 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useViewMode } from "@context/ViewModeContext";
 
 import OpdClaims from "./panel/opdClaims";
+import MyOpdClaims from "./panel/MyOpdClaims";
 
 export default function Opd() {
-  return <OpdClaims />;
+  const { viewMode } = useViewMode();
+  return viewMode === "admin" ? <OpdClaims /> : <MyOpdClaims />;
 }

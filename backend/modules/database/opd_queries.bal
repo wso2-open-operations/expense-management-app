@@ -109,6 +109,24 @@ isolated function getEmployeeTotalsForRangeQuery(int year, int monthRange, int m
     GROUP BY c.employee_email
 `;
 
+# Build the query for a single employee's OPD claim summary for a given year.
+#
+# + email - Employee email to filter on
+# + year - Reporting year
+# + return - Parameterized SQL query for the employee's OPD summary
+isolated function getMyOpdSummaryQuery(string email, int year) returns sql:ParameterizedQuery => `
+    SELECT COALESCE(SUM(CAST(t.txn_amount AS DECIMAL(10,2))), 0) AS claimedAmount,
+           COUNT(DISTINCT c.id) AS claimCount
+    FROM opd_claim c
+    LEFT JOIN opd_claim_transaction t ON t.claim_id = c.id
+    WHERE c.employee_email = ${email}
+      AND YEAR(c.added_date) = ${year}
+      AND c.status IN (
+            ${OPD_CLAIM_STATUS_PENDING_APPROVAL},
+            ${OPD_CLAIM_STATUS_APPROVED}
+          )
+`;
+
 # Build the query for claim transaction amounts across the selected reporting range.
 #
 # + year - Ending year of the reporting range
