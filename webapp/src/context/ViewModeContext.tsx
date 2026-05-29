@@ -15,7 +15,7 @@
 // under the License.
 import { createContext, useContext, useState } from "react";
 
-export type ViewMode = "admin" | "employee" | "lead";
+export type ViewMode = "admin" | "employee";
 
 interface ViewModeContextValue {
   viewMode: ViewMode;
@@ -24,7 +24,7 @@ interface ViewModeContextValue {
 
 const STORAGE_KEY = "viewMode";
 
-const VALID_MODES: ViewMode[] = ["admin", "employee", "lead"];
+const VALID_MODES: ViewMode[] = ["admin", "employee"];
 
 export const ViewModeContext = createContext<ViewModeContextValue>({
   viewMode: "admin",

@@ -31,7 +31,7 @@ import { useMemo, useState } from "react";
 
 import Logo from "@assets/images/pulse-orange.svg";
 import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
-import { useViewMode } from "@context/ViewModeContext";
+import { useViewMode, type ViewMode } from "@context/ViewModeContext";
 import { Role } from "@slices/authSlice/auth";
 import { RootState, useAppSelector } from "@slices/store";
 import { getActiveRouteDetails } from "@src/route";
@@ -146,9 +146,8 @@ function Layout() {
               options={[
                 { value: "admin", label: "Admin View" },
                 { value: "employee", label: "Employee View" },
-                { value: "lead", label: "Lead View" },
               ]}
-              onChange={(v) => setViewMode(v as "admin" | "employee" | "lead")}
+              onChange={(v) => setViewMode(v as ViewMode)}
             />
             <ColorSchemeToggle />
             <UserMenu>

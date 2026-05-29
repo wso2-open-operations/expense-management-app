@@ -164,7 +164,7 @@ const Sidebar = (props: SidebarProps) => {
                     width: "100%",
                   }}
                 >
-                  {(["admin", "employee", "lead"] as const).map((mode) => (
+                  {(["admin", "employee"] as const).map((mode) => (
                     <Box
                       key={mode}
                       component="button"
@@ -204,8 +204,8 @@ const Sidebar = (props: SidebarProps) => {
                     component="button"
                     type="button"
                     onClick={() => {
-                      const modes = ["admin", "employee", "lead"] as const;
-                      const next = modes[(modes.indexOf(viewMode) + 1) % modes.length];
+                      const modes = ["admin", "employee"] as const;
+                      const next = modes[(modes.indexOf(viewMode as "admin" | "employee") + 1) % modes.length];
                       setViewMode(next);
                     }}
                     sx={{
