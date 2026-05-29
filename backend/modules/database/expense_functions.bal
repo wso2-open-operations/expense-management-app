@@ -29,10 +29,11 @@ isolated function validateDateRangeInputs(int month, int monthRange, int? 'limit
 
 # Query all aggregate statistics for the given date range in one database round-trip.
 #
-# + year - Ending year of the reporting range
-# + month - Ending month of the reporting range
-# + monthRange - Number of months included in the reporting range
-# + businessUnit - Optional business unit filter
+# + year - Ending year of the reporting range  
+# + month - Ending month of the reporting range  
+# + monthRange - Number of months included in the reporting range  
+# + businessUnit - Optional business unit filter  
+# + email - parameter description
 # + return - Expense summary stats if the query succeeds, otherwise an error
 public function queryExpenseSummaryStats(int year, int month, int monthRange,
         string? businessUnit = (), string? email = ()) returns ExpenseSummaryStatsRow|error {

@@ -85,7 +85,7 @@ export default function DoughnutChart({
         dashOffset,
       };
     });
-  }, [circumference, data, total]);
+  }, [circumference, colors, data, total]);
 
   const activeIndex = hoveredIndex ?? 0;
   const activeItem = data[activeIndex];

@@ -54,10 +54,11 @@ isolated function getExpenseDateRangeClause(int year, int month, int monthRange)
 
 # Build the consolidated query for all aggregate statistics in one database round-trip.
 #
-# + year - Ending year of the reporting range
-# + month - Ending month of the reporting range
-# + monthRange - Number of months included in the reporting range
-# + businessUnit - Optional business unit filter
+# + year - Ending year of the reporting range  
+# + month - Ending month of the reporting range  
+# + monthRange - Number of months included in the reporting range  
+# + businessUnit - Optional business unit filter  
+# + email - parameter description
 # + return - Parameterized SQL query
 isolated function getExpenseSummaryStatsQuery(int year, int month, int monthRange,
         string? businessUnit = (), string? email = ()) returns sql:ParameterizedQuery {
