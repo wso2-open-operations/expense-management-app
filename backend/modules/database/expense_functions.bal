@@ -33,7 +33,7 @@ isolated function validateDateRangeInputs(int month, int monthRange, int? 'limit
 # + month - Ending month of the reporting range  
 # + monthRange - Number of months included in the reporting range  
 # + businessUnit - Optional business unit filter  
-# + email - parameter description
+# + email - Optional employee email to scope results to a specific employee
 # + return - Expense summary stats if the query succeeds, otherwise an error
 public function queryExpenseSummaryStats(int year, int month, int monthRange,
         string? businessUnit = (), string? email = ()) returns ExpenseSummaryStatsRow|error {

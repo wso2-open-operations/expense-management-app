@@ -70,7 +70,7 @@ export default function EmployeeCardClaims() {
   const monthTrend = prevMonthSpend > 0 ? Math.round(((thisMonthSpend - prevMonthSpend) / prevMonthSpend) * 100) : 0;
 
   const categories = breakdown?.categories ?? [];
-  const modalTransactions = liveTxns as unknown as ExpenseTransaction[];
+  const modalTransactions: ExpenseTransaction[] = liveTxns;
 
   const catTotalPages = Math.ceil(categories.length / 5);
   const paginatedCategories = categories.slice(catPage * 5, (catPage + 1) * 5);
@@ -102,8 +102,7 @@ export default function EmployeeCardClaims() {
               iconColor="#f59e0b"
               title="Card Spend in"
               chipLabel={String(currentYear)}
-              value={Math.round(totalSpend).toLocaleString()}
-              suffix="LKR"
+              value={fmtSym(Math.round(totalSpend))}
               trend="+0%"
               trendVariant="positive"
               trendLabel={`VS ${currentYear - 1}`}
@@ -114,8 +113,7 @@ export default function EmployeeCardClaims() {
               iconColor="#d97706"
               title="Card Spend in"
               chipLabel={currentMonthShort}
-              value={Math.round(thisMonthSpend).toLocaleString()}
-              suffix="LKR"
+              value={fmtSym(Math.round(thisMonthSpend))}
               trend={`${monthTrend >= 0 ? "+" : ""}${monthTrend}%`}
               trendVariant={monthTrend < 0 ? "negative" : "positive"}
               trendLabel={`VS ${prevMonthShort}`}

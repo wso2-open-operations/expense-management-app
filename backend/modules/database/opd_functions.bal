@@ -60,11 +60,11 @@ public function queryAllClaimEmployeeEmails() returns string[]|error {
         select row.employeeEmail.toLowerAscii();
 }
 
-# Query an employee's personal OPD summary for a given year.
+# Query all OPD claims submitted by an employee for a given year.
 #
 # + email - Employee email to filter on
 # + year - Reporting year
-# + return - OPD summary row if the query succeeds, otherwise an error
+# + return - List of OPD claim rows if the query succeeds, otherwise an error
 public function queryMyOpdClaims(string email, int year) returns MyOpdClaimRow[]|error {
     stream<MyOpdClaimRow, sql:Error?> claimsStream =
         expenseDbClient->query(getMyOpdClaimsQuery(email, year), MyOpdClaimRow);
@@ -72,6 +72,11 @@ public function queryMyOpdClaims(string email, int year) returns MyOpdClaimRow[]
         select row;
 }
 
+# Query the aggregated OPD claim summary for an employee for a given year.
+#
+# + email - Employee email to filter on
+# + year - Reporting year
+# + return - OPD summary row (total claimed amount and claim count) if the query succeeds, otherwise an error
 public function queryMyOpdSummary(string email, int year) returns MyOpdSummaryRow|error {
     return expenseDbClient->queryRow(getMyOpdSummaryQuery(email, year));
 }

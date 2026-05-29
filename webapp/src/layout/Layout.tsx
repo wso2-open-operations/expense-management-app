@@ -146,6 +146,7 @@ function Layout() {
               options={[
                 { value: "admin", label: "Admin View" },
                 { value: "employee", label: "Employee View" },
+                { value: "lead", label: "Lead View" },
               ]}
               onChange={(v) => setViewMode(v as "admin" | "employee" | "lead")}
             />

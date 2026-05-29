@@ -58,7 +58,7 @@ isolated function getExpenseDateRangeClause(int year, int month, int monthRange)
 # + month - Ending month of the reporting range  
 # + monthRange - Number of months included in the reporting range  
 # + businessUnit - Optional business unit filter  
-# + email - parameter description
+# + email - Optional employee email to scope results to a specific employee
 # + return - Parameterized SQL query
 isolated function getExpenseSummaryStatsQuery(int year, int month, int monthRange,
         string? businessUnit = (), string? email = ()) returns sql:ParameterizedQuery {

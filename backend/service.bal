@@ -60,7 +60,7 @@ isolated function fetchNameMap(string[] emails) returns map<string> {
     return hrNames is map<string> ? hrNames : {};
 }
 
-isolated function validateCCDateParams(int? year, int? month, int monthRange) returns http:BadRequest? {
+isolated function validateDateParams(int? year, int? month, int monthRange) returns http:BadRequest? {
     if year is int && (year < 1970 || year > 2100) {
         return <http:BadRequest>{body: {message: "Invalid year. Expected a value between 1970 and 2100."}};
     }
@@ -591,7 +591,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return authResult;
         }
 
-        http:BadRequest? validationError = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? validationError = validateDateParams(year, month, monthRange);
         if validationError is http:BadRequest {
             return validationError;
         }
@@ -638,6 +638,11 @@ service http:InterceptableService / on new http:Listener(9090) {
         authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
         if authResult is http:BadRequest {
             return authResult;
+        }
+
+        http:BadRequest? validationError = validateDateParams(year, month, monthRange);
+        if validationError is http:BadRequest {
+            return validationError;
         }
 
         [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, month);
@@ -710,6 +715,11 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <http:BadRequest>{body: {message: "Category is required."}};
         }
 
+        http:BadRequest? validationError = validateDateParams(year, month, monthRange);
+        if validationError is http:BadRequest {
+            return validationError;
+        }
+
         [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, month);
         if dateResult is HttpInternalServerError {
             return dateResult;
@@ -750,6 +760,11 @@ service http:InterceptableService / on new http:Listener(9090) {
             return authResult;
         }
 
+        http:BadRequest? validationError = validateDateParams(year, (), 0);
+        if validationError is http:BadRequest {
+            return validationError;
+        }
+
         [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, ());
         if dateResult is HttpInternalServerError {
             return dateResult;
@@ -779,6 +794,11 @@ service http:InterceptableService / on new http:Listener(9090) {
         authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
         if authResult is http:BadRequest {
             return authResult;
+        }
+
+        http:BadRequest? validationError = validateDateParams(year, (), 0);
+        if validationError is http:BadRequest {
+            return validationError;
         }
 
         [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, ());
@@ -1093,7 +1113,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return authResult;
         }
 
-        http:BadRequest? paramValidation = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? paramValidation = validateDateParams(year, month, monthRange);
         if paramValidation is http:BadRequest {
             return paramValidation;
         }
@@ -1147,7 +1167,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <http:BadRequest>{body: {message: "Category is required."}};
         }
 
-        http:BadRequest? paramValidation = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? paramValidation = validateDateParams(year, month, monthRange);
         if paramValidation is http:BadRequest {
             return paramValidation;
         }
@@ -1195,7 +1215,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return authResult;
         }
 
-        http:BadRequest? paramValidation = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? paramValidation = validateDateParams(year, month, monthRange);
         if paramValidation is http:BadRequest {
             return paramValidation;
         }
@@ -1248,7 +1268,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <http:BadRequest>{body: {message: "Employee email is required."}};
         }
 
-        http:BadRequest? paramValidation = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? paramValidation = validateDateParams(year, month, monthRange);
         if paramValidation is http:BadRequest {
             return paramValidation;
         }
@@ -1320,7 +1340,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <http:BadRequest>{body: {message: "Employee email and category are required."}};
         }
 
-        http:BadRequest? paramValidation = validateCCDateParams(year, month, monthRange);
+        http:BadRequest? paramValidation = validateDateParams(year, month, monthRange);
         if paramValidation is http:BadRequest {
             return paramValidation;
         }
