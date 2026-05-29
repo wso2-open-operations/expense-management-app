@@ -224,6 +224,51 @@ export function useMyExpenseTransactions(
   return { transactions, loading, error, fetchTransactions };
 }
 
+export interface MyOpdClaim {
+  id: string;
+  date: string;
+  amount: number;
+  status: string;
+  description?: string | null;
+  txnCount: number;
+}
+
+export function useMyOpdClaims(year?: number) {
+  const [claims, setClaims] = useState<MyOpdClaim[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const params = year ? { year: String(year) } : {};
+
+    apiService
+      .get<MyOpdClaim[]>("/my-opd-claims", { params })
+      .then((res) => {
+        if (!cancelled && res.data) {
+          setClaims((res.data ?? []).map((c) => ({ ...c, amount: Number(c.amount) })));
+        }
+      })
+      .catch((err) => {
+        if (!cancelled && !axios.isCancel(err)) {
+          setError("Failed to load your OPD claims.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year]);
+
+  return { claims, loading, error };
+}
+
 export function useMyOpdSummary(year?: number) {
   const [data, setData] = useState<MyOpdSummary | null>(null);
   const [loading, setLoading] = useState(false);

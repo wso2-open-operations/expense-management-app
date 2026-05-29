@@ -16,9 +16,9 @@
 import { useViewMode } from "@context/ViewModeContext";
 
 import ExpenseClaims from "./panel/expenseClaims";
-import MyExpenseClaims from "./panel/MyExpenseClaims";
+import EmployeeExpenseClaims from "./panel/EmployeeExpenseClaims";
 
 export default function Expense() {
   const { viewMode } = useViewMode();
-  return viewMode === "admin" ? <ExpenseClaims /> : <MyExpenseClaims />;
+  return viewMode === "admin" ? <ExpenseClaims /> : <EmployeeExpenseClaims />;
 }

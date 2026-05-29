@@ -428,6 +428,22 @@ public type ExpenseSummaryStatsResponse record {|
     int rejectedCount;
 |};
 
+# An individual OPD claim belonging to the authenticated employee.
+public type MyOpdClaimResponse record {|
+    # Claim identifier.
+    string id;
+    # Formatted claim date (YYYY-MM-DD).
+    string date;
+    # Total transaction amount for the claim.
+    decimal amount;
+    # Human-readable status label.
+    string status;
+    # Description from the first transaction, or null if no transactions.
+    string? description;
+    # Number of transactions linked to the claim.
+    int txnCount;
+|};
+
 # OPD claim summary for the authenticated employee for a given year.
 public type MyOpdSummaryResponse record {|
     # Total amount claimed in OPD transactions.

@@ -16,9 +16,9 @@
 import { useViewMode } from "@context/ViewModeContext";
 
 import CreditCard from "./panel/creditCard";
-import MyCardClaims from "./panel/MyCardClaims";
+import EmployeeCardClaims from "./panel/EmployeeCardClaims";
 
 export default function Credit() {
   const { viewMode } = useViewMode();
-  return viewMode === "admin" ? <CreditCard /> : <MyCardClaims />;
+  return viewMode === "admin" ? <CreditCard /> : <EmployeeCardClaims />;
 }

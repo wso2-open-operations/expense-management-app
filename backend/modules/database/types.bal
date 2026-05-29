@@ -208,6 +208,22 @@ public type MyOpdSummaryRow record {|
     int claimCount;
 |};
 
+# Query result for a single OPD claim belonging to the authenticated employee.
+public type MyOpdClaimRow record {|
+    # Claim identifier.
+    string id;
+    # Formatted claim date (YYYY-MM-DD).
+    string date;
+    # Total transaction amount for the claim.
+    decimal amount;
+    # Human-readable status label.
+    string status;
+    # Description from the first transaction, or null if no transactions.
+    string? description;
+    # Number of transactions linked to the claim.
+    int txnCount;
+|};
+
 # Query result for a single application setting key-value pair.
 public type AppSettingRow record {|
     # Setting identifier

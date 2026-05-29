@@ -16,9 +16,9 @@
 import { useViewMode } from "@context/ViewModeContext";
 
 import OpdClaims from "./panel/opdClaims";
-import MyOpdClaims from "./panel/MyOpdClaims";
+import EmployeeOpdClaims from "./panel/EmployeeOpdClaims";
 
 export default function Opd() {
   const { viewMode } = useViewMode();
-  return viewMode === "admin" ? <OpdClaims /> : <MyOpdClaims />;
+  return viewMode === "admin" ? <OpdClaims /> : <EmployeeOpdClaims />;
 }

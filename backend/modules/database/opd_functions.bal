@@ -65,6 +65,13 @@ public function queryAllClaimEmployeeEmails() returns string[]|error {
 # + email - Employee email to filter on
 # + year - Reporting year
 # + return - OPD summary row if the query succeeds, otherwise an error
+public function queryMyOpdClaims(string email, int year) returns MyOpdClaimRow[]|error {
+    stream<MyOpdClaimRow, sql:Error?> claimsStream =
+        expenseDbClient->query(getMyOpdClaimsQuery(email, year), MyOpdClaimRow);
+    return check from MyOpdClaimRow row in claimsStream
+        select row;
+}
+
 public function queryMyOpdSummary(string email, int year) returns MyOpdSummaryRow|error {
     return expenseDbClient->queryRow(getMyOpdSummaryQuery(email, year));
 }

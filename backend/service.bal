@@ -767,6 +767,38 @@ service http:InterceptableService / on new http:Listener(9090) {
         return {claimedAmount: opdStats.claimedAmount, claimCount: opdStats.claimCount};
     }
 
+    # Get the authenticated employee's own OPD claims list for a given year.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + year - Optional reporting year (defaults to current year)
+    # + testEmail - Optional email override for testing
+    # + return - OPD claims list for the caller if successful, otherwise an HTTP error response
+    resource function get my\-opd\-claims(http:RequestContext ctx, int? year = (), string? testEmail = ())
+        returns MyOpdClaimResponse[]|http:BadRequest|HttpInternalServerError {
+
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return authResult;
+        }
+
+        [int, int]|HttpInternalServerError dateResult = resolveEffectiveDate(year, ());
+        if dateResult is HttpInternalServerError {
+            return dateResult;
+        }
+        int effectiveYear = dateResult[0];
+        string callerEmail = testEmail ?: authResult.email;
+
+        database:MyOpdClaimRow[]|error claimRows = database:queryMyOpdClaims(callerEmail, effectiveYear);
+        if claimRows is error {
+            string customError = "Failed to fetch personal OPD claims.";
+            log:printError(customError, claimRows);
+            return <HttpInternalServerError>{body: {message: customError}};
+        }
+
+        return from database:MyOpdClaimRow row in claimRows
+            select {id: row.id, date: row.date, amount: row.amount, status: row.status, description: row.description, txnCount: row.txnCount};
+    }
+
     # Get the lead approval frequency list for the requested reporting period.
     #
     # + ctx - Request context containing authenticated user information

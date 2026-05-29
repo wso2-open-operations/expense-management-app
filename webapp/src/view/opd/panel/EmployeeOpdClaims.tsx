@@ -23,7 +23,7 @@ import SummaryCard from "@component/card/SummaryCard";
 import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
 import PaginationBar from "@component/common/PaginationBar";
 import { CC_DATE_RANGE_OPTIONS } from "@config/constant";
-import { useMyOpdSummary } from "@slices/expenseSlice/useMyExpense";
+import { type MyOpdClaim, useMyOpdClaims } from "@slices/expenseSlice/useMyExpense";
 import { formatWithSymbol } from "@utils/currency";
 
 const OPD_CLAIM_LIMIT = 40000;
@@ -39,7 +39,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 const DATE_RANGE_OPTIONS = CC_DATE_RANGE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
 
-function filterClaimsByRange(claims: OpdClaim[], range: string): OpdClaim[] {
+function filterClaimsByRange(claims: MyOpdClaim[], range: string): MyOpdClaim[] {
   const now = new Date();
   switch (range) {
     case "This Month": {
@@ -68,30 +68,7 @@ function filterClaimsByRange(claims: OpdClaim[], range: string): OpdClaim[] {
   }
 }
 
-interface OpdClaim {
-  id: string;
-  description: string;
-  date: string;
-  amount: number;
-  status: string;
-  hospital: string;
-  submittedDate: string;
-  processedDate?: string | null;
-}
-
-const MOCK_CLAIMS: OpdClaim[] = [
-  { id: "OPD-2026-001", description: "General Consultation", date: "2026-02-15", amount: 8500, status: "Approved", hospital: "Nawaloka Hospital", submittedDate: "2026-02-16", processedDate: "2026-02-18" },
-  { id: "OPD-2026-002", description: "Specialist Consultation", date: "2026-04-08", amount: 12500, status: "Approved", hospital: "Asiri Medical Center", submittedDate: "2026-04-09", processedDate: "2026-04-12" },
-  { id: "OPD-2026-003", description: "Pharmacy — Prescribed Medication", date: "2026-04-20", amount: 2700, status: "Approved", hospital: "Osu Sala Pharmacy", submittedDate: "2026-04-21", processedDate: "2026-04-24" },
-  { id: "OPD-2026-004", description: "Laboratory Tests", date: "2026-05-10", amount: 15200, status: "Pending", hospital: "Durdans Hospital", submittedDate: "2026-05-11", processedDate: null },
-  { id: "OPD-2026-005", description: "Physiotherapy Session", date: "2026-05-22", amount: 3600, status: "Pending", hospital: "Hemas Hospital Wattala", submittedDate: "2026-05-23", processedDate: null },
-];
-
-function claimMonth(c: OpdClaim): string {
-  return MONTHS[new Date(c.date).getMonth()];
-}
-
-export default function MyOpdClaims() {
+export default function EmployeeOpdClaims() {
   const [dateRange, setDateRange] = useState("All Time");
   const [page, setPage] = useState(0);
 
@@ -100,18 +77,19 @@ export default function MyOpdClaims() {
   const currentMonthShort = MONTHS[currentMonthIdx];
   const prevMonthShort = MONTHS[(currentMonthIdx + 11) % 12];
 
-  const { loading } = useMyOpdSummary(currentYear);
+  const { claims, loading, error } = useMyOpdClaims(currentYear);
   const fmtSym = (v: number) => formatWithSymbol(v, "LKR");
-
-  const USE_MOCK = true;
-  const claims = USE_MOCK ? MOCK_CLAIMS : [];
 
   const yearTotal = claims.reduce((s, c) => s + c.amount, 0);
   const approvedClaims = claims.filter((c) => c.status === "Approved");
   const pendingClaims = claims.filter((c) => c.status === "Pending");
 
-  const thisMonthTotal = claims.filter((c) => claimMonth(c) === currentMonthShort).reduce((s, c) => s + c.amount, 0);
-  const prevMonthTotal = claims.filter((c) => claimMonth(c) === prevMonthShort).reduce((s, c) => s + c.amount, 0);
+  const thisMonthTotal = claims
+    .filter((c) => MONTHS[new Date(c.date).getMonth()] === currentMonthShort)
+    .reduce((s, c) => s + c.amount, 0);
+  const prevMonthTotal = claims
+    .filter((c) => MONTHS[new Date(c.date).getMonth()] === prevMonthShort)
+    .reduce((s, c) => s + c.amount, 0);
   const monthTrend = prevMonthTotal > 0 ? Math.round(((thisMonthTotal - prevMonthTotal) / prevMonthTotal) * 100) : 0;
 
   const filteredClaims = filterClaimsByRange(claims, dateRange);
@@ -183,7 +161,7 @@ export default function MyOpdClaims() {
         )}
       </Box>
 
-      {/* Bottom row — claim summary (3fr) + side cards (1fr) */}
+      {/* Bottom row — claim summary (4fr) + side cards (1fr) */}
       <Box
         sx={{
           mt: 2,
@@ -232,6 +210,10 @@ export default function MyOpdClaims() {
               {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} variant="rectangular" height={64} sx={{ borderRadius: 1 }} />
               ))}
+            </Box>
+          ) : error ? (
+            <Box sx={{ py: 5, textAlign: "center" }}>
+              <Typography sx={{ color: "error.main", fontSize: 13 }}>{error}</Typography>
             </Box>
           ) : (
             <>
@@ -308,10 +290,10 @@ export default function MyOpdClaims() {
                           <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
                           <Box sx={{ minWidth: 0 }}>
                             <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {claim.description}
+                              {claim.description ?? `OPD Claim #${claim.id}`}
                             </Typography>
                             <Typography sx={{ fontSize: 11, color: "text.disabled", mt: 0.2 }}>
-                              {claim.hospital} · {claim.date}
+                              {claim.txnCount} item{claim.txnCount !== 1 ? "s" : ""} · {claim.date}
                             </Typography>
                           </Box>
                         </Box>
