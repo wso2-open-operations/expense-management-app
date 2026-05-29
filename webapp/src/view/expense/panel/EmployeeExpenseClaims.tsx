@@ -106,8 +106,7 @@ export default function EmployeeExpenseClaims() {
               iconColor="#f59e0b"
               title="Claim Amount in"
               chipLabel={String(currentYear)}
-              value={Math.round(yearTotal).toLocaleString()}
-              suffix="LKR"
+              value={fmtSym(Math.round(yearTotal))}
               trend="+0%"
               trendVariant="positive"
               trendLabel={`VS ${currentYear - 1}`}
@@ -118,8 +117,7 @@ export default function EmployeeExpenseClaims() {
               iconColor="#d97706"
               title="Claim Amount in"
               chipLabel={currentMonthShort}
-              value={Math.round(thisMonthTotal).toLocaleString()}
-              suffix="LKR"
+              value={fmtSym(Math.round(thisMonthTotal))}
               trend={`${monthTrend >= 0 ? "+" : ""}${monthTrend}%`}
               trendVariant={monthTrend < 0 ? "negative" : "positive"}
               trendLabel={`VS ${prevMonthShort}`}
