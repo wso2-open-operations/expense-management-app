@@ -45,8 +45,6 @@ export default function SideCountCard({
         alignItems: "center",
         textAlign: "center",
         flex: 1,
-        height: "100%",
-        minHeight: 0,
       }}
     >
       <Typography

@@ -56,7 +56,7 @@ export default function EmployeeExpenseClaims() {
   const { data: thisMonthData, loading: thisMonthLoading } = useMyExpenseSummary("This Month");
   const { data: lastMonthData } = useMyExpenseSummary("Last Month");
   const { breakdown, loading: breakdownLoading } = useMyExpenseBreakdown(dateRange, "All");
-  const { transactions, loading: txnLoading, error: txnError } = useMyExpenseTransactions(modalCategory, dateRange, "All");
+  const { transactions: liveTxns, loading: txnLoading, error: txnError } = useMyExpenseTransactions(modalCategory, dateRange, "All");
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
@@ -66,15 +66,15 @@ export default function EmployeeExpenseClaims() {
   const totalCount = yearData?.totalCount ?? 0;
   const approvedCount = yearData?.approvedCount ?? 0;
   const pendingCount = yearData?.pendingCount ?? 0;
-
   const thisMonthTotal = thisMonthData?.totalAmount ?? 0;
   const prevMonthTotal = lastMonthData?.totalAmount ?? 0;
   const monthTrend = prevMonthTotal > 0 ? Math.round(((thisMonthTotal - prevMonthTotal) / prevMonthTotal) * 100) : 0;
 
   const categories = breakdown?.categories ?? [];
+  const modalTransactions = liveTxns as ExpenseTransaction[];
+
   const catTotalPages = Math.ceil(categories.length / 5);
   const paginatedCategories = categories.slice(catPage * 5, (catPage + 1) * 5);
-
   const selectedCat = categories.find((c) => c.category === modalCategory);
 
   return (
@@ -87,14 +87,7 @@ export default function EmployeeExpenseClaims() {
             Your submitted expense claims
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <CurrencySelector value={currency} onChange={setCurrency} />
-          <ChartPeriodFilter
-            value={chartPeriod}
-            options={MONTH_OPTIONS}
-            onChange={(v) => { setChartPeriod(v); setModalCategory(null); setCatPage(0); }}
-          />
-        </Box>
+        <CurrencySelector value={currency} onChange={setCurrency} />
       </Box>
 
       {yearError && (
@@ -148,15 +141,22 @@ export default function EmployeeExpenseClaims() {
         )}
       </Box>
 
-      {/* Full-width: Expense Categories */}
+      {/* Expense Categories */}
       <ChartCard
         title="Expense Categories"
         subtitle="Click a category to view transactions"
+        action={
+          <ChartPeriodFilter
+            value={chartPeriod}
+            options={MONTH_OPTIONS}
+            onChange={(v) => { setChartPeriod(v); setModalCategory(null); setCatPage(0); }}
+          />
+        }
       >
         {breakdownLoading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} variant="rectangular" height={68} sx={{ borderRadius: 1 }} />
+              <Skeleton key={i} variant="rectangular" height={44} sx={{ borderRadius: 1 }} />
             ))}
           </Box>
         ) : categories.length === 0 ? (
@@ -165,45 +165,73 @@ export default function EmployeeExpenseClaims() {
           </Box>
         ) : (
           <>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 80px 110px",
+                px: 2,
+                py: 1,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                mb: 0.5,
+              }}
+            >
+              {["Category", "Claims", "Amount"].map((h, i) => (
+                <Typography
+                  key={h}
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "text.disabled",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.6,
+                    textAlign: i === 0 ? "left" : "right",
+                  }}
+                >
+                  {h}
+                </Typography>
+              ))}
+            </Box>
+
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
               {paginatedCategories.map((cat) => {
                 const idx = categories.indexOf(cat);
+                const color = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
                 return (
                   <Box
                     key={cat.category}
                     onClick={() => setModalCategory(cat.category)}
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1fr) 80px 110px",
                       alignItems: "center",
                       px: 2,
                       py: 1.5,
-                      borderRadius: 1,
-                      border: "1px solid",
+                      borderRadius: 0.5,
+                      borderBottom: "1px solid",
                       borderColor: "divider",
                       cursor: "pointer",
-                      "&:hover": { bgcolor: "action.hover", borderColor: "primary.main" },
-                      transition: "all 0.15s",
+                      "&:hover": { bgcolor: "action.hover" },
+                      transition: "background 0.12s",
                     }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-                      <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: SEGMENT_COLORS[idx % SEGMENT_COLORS.length], flexShrink: 0 }} />
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {cat.category}
-                        </Typography>
-                        <Typography sx={{ fontSize: 11, color: "text.disabled", mt: 0.2 }}>
-                          {cat.claimCount} claim{cat.claimCount !== 1 ? "s" : ""} · {cat.percentage.toFixed(1)}%
-                        </Typography>
-                      </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {cat.category}
+                      </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", flexShrink: 0, ml: 2 }}>
+                    <Typography sx={{ fontSize: 13, color: "text.secondary", textAlign: "right" }}>
+                      {cat.claimCount}
+                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", textAlign: "right" }}>
                       {fmtSym(cat.total)}
                     </Typography>
                   </Box>
                 );
               })}
             </Box>
+
             {catTotalPages > 1 && (
               <PaginationBar page={catPage} totalPages={catTotalPages} onPageChange={setCatPage} />
             )}
@@ -211,7 +239,6 @@ export default function EmployeeExpenseClaims() {
         )}
       </ChartCard>
 
-      {/* Transactions modal */}
       <ExpenseCategoryTransactionsModal
         open={modalCategory !== null}
         onClose={() => setModalCategory(null)}
@@ -221,7 +248,7 @@ export default function EmployeeExpenseClaims() {
         percentage={selectedCat?.percentage ?? 0}
         color={SEGMENT_COLORS[categories.findIndex((c) => c.category === modalCategory) % SEGMENT_COLORS.length]}
         currency={currency}
-        transactions={transactions as ExpenseTransaction[]}
+        transactions={modalTransactions}
         loading={txnLoading}
         error={txnError}
       />

@@ -52,7 +52,7 @@ export default function EmployeeCardClaims() {
   const { breakdown: thisMonthData, loading: thisMonthLoading } = useCCEmployeeBreakdown(email, "This Month");
   const { breakdown: lastMonthData } = useCCEmployeeBreakdown(email, "Last Month");
   const { breakdown, loading, error } = useCCEmployeeBreakdown(email, dateRange);
-  const { transactions, loading: txnLoading, error: txnError } = useCCEmployeeCategoryTransactions(email, modalCategory, dateRange);
+  const { transactions: liveTxns, loading: txnLoading, error: txnError } = useCCEmployeeCategoryTransactions(email, modalCategory, dateRange);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
@@ -70,33 +70,24 @@ export default function EmployeeCardClaims() {
   const monthTrend = prevMonthSpend > 0 ? Math.round(((thisMonthSpend - prevMonthSpend) / prevMonthSpend) * 100) : 0;
 
   const categories = breakdown?.categories ?? [];
+  const modalTransactions = liveTxns as unknown as ExpenseTransaction[];
+
   const catTotalPages = Math.ceil(categories.length / 5);
   const paginatedCategories = categories.slice(catPage * 5, (catPage + 1) * 5);
-
   const selectedCat = categories.find((c) => c.category === modalCategory);
 
   return (
     <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
 
-      {/* Page header + controls row */}
-      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+      {/* Page header */}
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
-            Card Claims
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: "text.secondary", mt: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>Card Claims</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
             Your corporate card spending
           </Typography>
         </Box>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <CurrencySelector value={currency} onChange={setCurrency} />
-          <ChartPeriodFilter
-            value={dateRange}
-            options={DATE_RANGE_OPTIONS}
-            onChange={(v) => { setDateRange(v); setModalCategory(null); setCatPage(0); }}
-          />
-        </Box>
+        <CurrencySelector value={currency} onChange={setCurrency} />
       </Box>
 
       {/* Summary cards */}
@@ -136,9 +127,9 @@ export default function EmployeeCardClaims() {
               title="Transactions in"
               chipLabel={String(currentYear)}
               value={String(txnCount)}
-              trend={fmtSym(totalSpend)}
+              trend={String(categories.length)}
               trendVariant="positive"
-              trendLabel="Total Spend"
+              trendLabel="Categories"
             />
           </>
         )}
@@ -148,15 +139,22 @@ export default function EmployeeCardClaims() {
         <Typography sx={{ color: "error.main", fontSize: 13 }}>{error}</Typography>
       )}
 
-      {/* Transaction Categories — tabular list */}
+      {/* Transaction Categories */}
       <ChartCard
         title="Transaction Categories"
         subtitle="Click a category to view transactions"
+        action={
+          <ChartPeriodFilter
+            value={dateRange}
+            options={DATE_RANGE_OPTIONS}
+            onChange={(v) => { setDateRange(v); setModalCategory(null); setCatPage(0); }}
+          />
+        }
       >
         {loading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} variant="rectangular" height={68} sx={{ borderRadius: 1 }} />
+              <Skeleton key={i} variant="rectangular" height={44} sx={{ borderRadius: 1 }} />
             ))}
           </Box>
         ) : categories.length === 0 ? (
@@ -165,45 +163,73 @@ export default function EmployeeCardClaims() {
           </Box>
         ) : (
           <>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 80px 110px",
+                px: 2,
+                py: 1,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                mb: 0.5,
+              }}
+            >
+              {["Category", "Transactions", "Amount"].map((h, i) => (
+                <Typography
+                  key={h}
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "text.disabled",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.6,
+                    textAlign: i === 0 ? "left" : "right",
+                  }}
+                >
+                  {h}
+                </Typography>
+              ))}
+            </Box>
+
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
               {paginatedCategories.map((cat) => {
                 const idx = categories.indexOf(cat);
+                const color = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
                 return (
                   <Box
                     key={cat.category}
                     onClick={() => setModalCategory(cat.category)}
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1fr) 80px 110px",
                       alignItems: "center",
                       px: 2,
                       py: 1.5,
-                      borderRadius: 1,
-                      border: "1px solid",
+                      borderRadius: 0.5,
+                      borderBottom: "1px solid",
                       borderColor: "divider",
                       cursor: "pointer",
-                      "&:hover": { bgcolor: "action.hover", borderColor: "primary.main" },
-                      transition: "all 0.15s",
+                      "&:hover": { bgcolor: "action.hover" },
+                      transition: "background 0.12s",
                     }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-                      <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: SEGMENT_COLORS[idx % SEGMENT_COLORS.length], flexShrink: 0 }} />
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {cat.category}
-                        </Typography>
-                        <Typography sx={{ fontSize: 11, color: "text.disabled", mt: 0.2 }}>
-                          {cat.txnCount} txn{cat.txnCount !== 1 ? "s" : ""} · {cat.percentage.toFixed(1)}%
-                        </Typography>
-                      </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {cat.category}
+                      </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", flexShrink: 0, ml: 2 }}>
+                    <Typography sx={{ fontSize: 13, color: "text.secondary", textAlign: "right" }}>
+                      {cat.txnCount}
+                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", textAlign: "right" }}>
                       {fmtSym(cat.total)}
                     </Typography>
                   </Box>
                 );
               })}
             </Box>
+
             {catTotalPages > 1 && (
               <PaginationBar page={catPage} totalPages={catTotalPages} onPageChange={setCatPage} />
             )}
@@ -211,7 +237,6 @@ export default function EmployeeCardClaims() {
         )}
       </ChartCard>
 
-      {/* Transactions modal */}
       <ExpenseCategoryTransactionsModal
         open={modalCategory !== null}
         onClose={() => setModalCategory(null)}
@@ -221,7 +246,7 @@ export default function EmployeeCardClaims() {
         percentage={selectedCat?.percentage ?? 0}
         color={SEGMENT_COLORS[categories.findIndex((c) => c.category === modalCategory) % SEGMENT_COLORS.length]}
         currency={currency}
-        transactions={transactions as unknown as ExpenseTransaction[]}
+        transactions={modalTransactions}
         loading={txnLoading}
         error={txnError}
       />

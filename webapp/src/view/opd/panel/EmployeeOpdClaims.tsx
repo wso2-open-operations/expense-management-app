@@ -26,7 +26,6 @@ import { CC_DATE_RANGE_OPTIONS } from "@config/constant";
 import { type MyOpdClaim, useMyOpdClaims } from "@slices/expenseSlice/useMyExpense";
 import { formatWithSymbol } from "@utils/currency";
 
-const OPD_CLAIM_LIMIT = 40000;
 const PAGE_SIZE = 3;
 
 const STATUS_COLORS: Record<string, string> = {
@@ -49,18 +48,24 @@ function filterClaimsByRange(claims: MyOpdClaim[], range: string): MyOpdClaim[] 
     case "Last Month": {
       const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const end = new Date(now.getFullYear(), now.getMonth(), 0);
-      return claims.filter((c) => { const d = new Date(c.date); return d >= start && d <= end; });
+      return claims.filter((c) => {
+        const d = new Date(c.date);
+        return d >= start && d <= end;
+      });
     }
     case "Last 3 Months": {
-      const cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - 3);
+      const cutoff = new Date(now);
+      cutoff.setMonth(cutoff.getMonth() - 3);
       return claims.filter((c) => new Date(c.date) >= cutoff);
     }
     case "Last 6 Months": {
-      const cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth() - 6);
+      const cutoff = new Date(now);
+      cutoff.setMonth(cutoff.getMonth() - 6);
       return claims.filter((c) => new Date(c.date) >= cutoff);
     }
     case "Last Year": {
-      const cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear() - 1);
+      const cutoff = new Date(now);
+      cutoff.setFullYear(cutoff.getFullYear() - 1);
       return claims.filter((c) => new Date(c.date) >= cutoff);
     }
     default:
@@ -90,30 +95,51 @@ export default function EmployeeOpdClaims() {
   const prevMonthTotal = claims
     .filter((c) => MONTHS[new Date(c.date).getMonth()] === prevMonthShort)
     .reduce((s, c) => s + c.amount, 0);
-  const monthTrend = prevMonthTotal > 0 ? Math.round(((thisMonthTotal - prevMonthTotal) / prevMonthTotal) * 100) : 0;
+  const monthTrend =
+    prevMonthTotal > 0 ? Math.round(((thisMonthTotal - prevMonthTotal) / prevMonthTotal) * 100) : 0;
 
   const filteredClaims = filterClaimsByRange(claims, dateRange);
   const filteredTotal = filteredClaims.reduce((s, c) => s + c.amount, 0);
-  const filteredApproved = filteredClaims.filter((c) => c.status === "Approved").reduce((s, c) => s + c.amount, 0);
-  const filteredPending = filteredClaims.filter((c) => c.status === "Pending").reduce((s, c) => s + c.amount, 0);
+  const filteredApproved = filteredClaims
+    .filter((c) => c.status === "Approved")
+    .reduce((s, c) => s + c.amount, 0);
+  const filteredPending = filteredClaims
+    .filter((c) => c.status === "Pending")
+    .reduce((s, c) => s + c.amount, 0);
 
   const totalPages = Math.ceil(filteredClaims.length / PAGE_SIZE);
   const paginatedClaims = filteredClaims.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <Box
-      sx={{
-        p: 2,
-        bgcolor: "background.default",
-        height: "100%",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Top row — 3 summary cards */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" }, gap: 2, flexShrink: 0 }}>
+    <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
+      {/* Page header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            OPD Claims
+          </Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+            Your submitted OPD claims
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* 3 summary cards */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
+          gap: 2,
+        }}
+      >
         {loading ? (
           [...Array(3)].map((_, i) => (
             <Skeleton key={i} variant="rectangular" height={130} sx={{ borderRadius: 1 }} />
@@ -151,11 +177,11 @@ export default function EmployeeOpdClaims() {
               title="Number of Claims"
               chipLabel={String(currentYear)}
               value={String(claims.length)}
-              trend={`${OPD_CLAIM_LIMIT.toLocaleString()} limit`}
+              trend={String(approvedClaims.length)}
               trendVariant="positive"
-              trendLabel="Annual OPD limit"
+              trendLabel="Approved"
               footerRight={String(pendingClaims.length)}
-              footerRightLabel="Pending Claims"
+              footerRightLabel="Pending"
             />
           </>
         )}
@@ -164,13 +190,10 @@ export default function EmployeeOpdClaims() {
       {/* Bottom row — claim summary (4fr) + side cards (1fr) */}
       <Box
         sx={{
-          mt: 2,
           display: "grid",
           gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 4fr) minmax(220px, 1fr)" },
           gap: 2,
-          alignItems: "stretch",
-          flex: 1,
-          minHeight: 0,
+          alignItems: "start",
         }}
       >
         {/* Claim Summary panel */}
@@ -184,14 +207,16 @@ export default function EmployeeOpdClaims() {
             display: "flex",
             flexDirection: "column",
             gap: 2,
-            minHeight: 0,
-            overflow: "hidden",
+            minHeight: 385,
           }}
         >
-          {/* Header row */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexShrink: 0 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}
+          >
             <Box>
-              <Typography sx={{ fontWeight: 700, fontSize: 16, color: "text.primary", lineHeight: 1.3 }}>
+              <Typography
+                sx={{ fontWeight: 700, fontSize: 16, color: "text.primary", lineHeight: 1.3 }}
+              >
                 Claim Summary
               </Typography>
               <Typography sx={{ fontSize: 12, color: "text.disabled", mt: 0.3 }}>
@@ -201,7 +226,10 @@ export default function EmployeeOpdClaims() {
             <ChartPeriodFilter
               value={dateRange}
               options={DATE_RANGE_OPTIONS}
-              onChange={(v) => { setDateRange(v); setPage(0); }}
+              onChange={(v) => {
+                setDateRange(v);
+                setPage(0);
+              }}
             />
           </Box>
 
@@ -217,7 +245,6 @@ export default function EmployeeOpdClaims() {
             </Box>
           ) : (
             <>
-              {/* Period stats strip */}
               {filteredClaims.length > 0 && (
                 <Box
                   sx={{
@@ -225,15 +252,28 @@ export default function EmployeeOpdClaims() {
                     border: "1px solid",
                     borderColor: "divider",
                     borderRadius: 2,
-                    bgcolor: "background.paper",
                     overflow: "hidden",
-                    flexShrink: 0,
                   }}
                 >
                   {[
-                    { label: "Total", amount: filteredTotal, count: filteredClaims.length, color: "text.primary" },
-                    { label: "Approved", amount: filteredApproved, count: filteredClaims.filter((c) => c.status === "Approved").length, color: STATUS_COLORS.Approved },
-                    { label: "Pending", amount: filteredPending, count: filteredClaims.filter((c) => c.status === "Pending").length, color: STATUS_COLORS.Pending },
+                    {
+                      label: "Total",
+                      amount: filteredTotal,
+                      count: filteredClaims.length,
+                      color: "text.primary",
+                    },
+                    {
+                      label: "Approved",
+                      amount: filteredApproved,
+                      count: filteredClaims.filter((c) => c.status === "Approved").length,
+                      color: STATUS_COLORS.Approved,
+                    },
+                    {
+                      label: "Pending",
+                      amount: filteredPending,
+                      count: filteredClaims.filter((c) => c.status === "Pending").length,
+                      color: STATUS_COLORS.Pending,
+                    },
                   ].map((col, i) => (
                     <Box
                       key={col.label}
@@ -246,10 +286,26 @@ export default function EmployeeOpdClaims() {
                         borderColor: "divider",
                       }}
                     >
-                      <Typography sx={{ fontSize: 9, fontWeight: 800, color: col.color, textTransform: "uppercase", letterSpacing: 1, mb: 0.3 }}>
+                      <Typography
+                        sx={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          color: col.color,
+                          textTransform: "uppercase",
+                          letterSpacing: 1,
+                          mb: 0.3,
+                        }}
+                      >
                         {col.label}
                       </Typography>
-                      <Typography sx={{ fontSize: 16, fontWeight: 800, color: "text.primary", lineHeight: 1.2 }}>
+                      <Typography
+                        sx={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: "text.primary",
+                          lineHeight: 1.2,
+                        }}
+                      >
                         {fmtSym(col.amount)}
                       </Typography>
                       <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.2 }}>
@@ -261,13 +317,15 @@ export default function EmployeeOpdClaims() {
               )}
 
               {filteredClaims.length === 0 ? (
-                <Box sx={{ py: 5, textAlign: "center", flexShrink: 0 }}>
+                <Box
+                  sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
                   <Typography sx={{ color: "text.disabled", fontSize: 13 }}>
                     No claims in this period
                   </Typography>
                 </Box>
               ) : (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                   {paginatedClaims.map((claim) => {
                     const color = STATUS_COLORS[claim.status] ?? "#9e9e9e";
                     return (
@@ -287,9 +345,26 @@ export default function EmployeeOpdClaims() {
                         }}
                       >
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-                          <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+                          <Box
+                            sx={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              bgcolor: color,
+                              flexShrink: 0,
+                            }}
+                          />
                           <Box sx={{ minWidth: 0 }}>
-                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "text.primary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Typography
+                              sx={{
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: "text.primary",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
                               {claim.description ?? `OPD Claim #${claim.id}`}
                             </Typography>
                             <Typography sx={{ fontSize: 11, color: "text.disabled", mt: 0.2 }}>
@@ -318,7 +393,7 @@ export default function EmployeeOpdClaims() {
         </Box>
 
         {/* Side cards */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <SideCountCard
             title="APPROVED"
             value={String(approvedClaims.length)}
