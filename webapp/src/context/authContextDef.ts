@@ -21,4 +21,4 @@ export type AuthContextType = {
   appSignOut: () => void;
 };
 
-export const AppAuthContext = React.createContext<AuthContextType>({} as AuthContextType);
+export const AppAuthContext = React.createContext<AuthContextType | null>(null);
