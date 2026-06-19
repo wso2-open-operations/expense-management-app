@@ -18,4 +18,10 @@ import { useContext } from "react";
 
 import { AppAuthContext, type AuthContextType } from "./authContextDef";
 
-export const useAppAuthContext = (): AuthContextType => useContext(AppAuthContext);
+export const useAppAuthContext = (): AuthContextType => {
+  const context = useContext(AppAuthContext);
+  if (!context) {
+    throw new Error("useAppAuthContext must be used within AppAuthContext.Provider");
+  }
+  return context;
+};
