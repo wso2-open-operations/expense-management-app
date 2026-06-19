@@ -23,6 +23,7 @@ import ballerina/log;
 import ballerina/time;
 
 public configurable AppConfig appConfig = ?;
+public configurable string[] corsAllowOrigins = ["http://localhost:3000"];
 
 final cache:Cache cache = new ({
     capacity: CACHE_CAPACITY,
@@ -168,7 +169,7 @@ service class ErrorInterceptor {
 }
 @http:ServiceConfig {
     cors: {
-        allowOrigins: ["http://localhost:3000"],
+        allowOrigins: corsAllowOrigins,
         allowCredentials: true,
         allowHeaders: ["Authorization", "Content-Type", "x-jwt-assertion", "x-access-token"],
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
