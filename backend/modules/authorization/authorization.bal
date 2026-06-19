@@ -32,6 +32,11 @@ public isolated service class JwtInterceptor {
     isolated resource function default [string... path](http:RequestContext ctx, http:Request req)
         returns http:NextService|http:Forbidden|http:InternalServerError|error? {
 
+        if req.method == http:OPTIONS {
+            return ctx.next();
+        }
+
+        log:printInfo(req.getHeaderNames().toString());
         string|error idToken = req.getHeader(JWT_ASSERTION_HEADER);
 
         if idToken is error {
@@ -59,13 +64,21 @@ public isolated service class JwtInterceptor {
         }
 
         string|string[] groups = userInfo.groups;
-        UserInfo userInfoHeader = {
+        
+        AsgardeoProfile asgardeoProfile = {
             email: userInfo.email,
-            groups: groups is string[] ? groups : [groups]
+            groups: groups is string[] ? groups : [groups],
+            firstName: userInfo.given_name ?: "",
+            lastName: userInfo.family_name ?: ""
         };
+        
+        string|error accessTokenHeader = req.getHeader(ACCESS_TOKEN_HEADER);
+        string accessToken = accessTokenHeader is string ? accessTokenHeader : "";
+        ctx.set(HEADER_ACCESS_TOKEN, accessToken);
+
         foreach anydata role in authorizedRoles.toArray() {
-            if userInfoHeader.groups.some(r => r === role) {
-                ctx.set(HEADER_USER_INFO, userInfoHeader);
+            if asgardeoProfile.groups.some(r => r === role) {
+                ctx.set(HEADER_USER_INFO, asgardeoProfile);
                 return ctx.next();
             }
         }
