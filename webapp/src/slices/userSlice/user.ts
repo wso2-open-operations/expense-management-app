@@ -17,7 +17,6 @@
 import { type PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
 
-import { AppConfig } from "@config/config";
 import type { UserInfoInterface, UserState } from "@slices/authSlice/auth";
 import { APIService } from "@utils/apiService";
 
@@ -30,22 +29,25 @@ const initialState: UserState = {
   userInfo: null,
 };
 
-export const getUserInfo = createAsyncThunk("user/getUserInfo", async () => {
-  return new Promise<{
-    UserInfo: UserInfoInterface;
-  }>((resolve, reject) => {
-    APIService.getInstance()
-      .get(AppConfig.serviceUrls.userInfo)
-      .then((resp) => {
-        resolve({
-          UserInfo: resp.data,
+export const getUserInfo = createAsyncThunk(
+  "user/getUserInfo",
+  async (email: string) => {
+    return new Promise<{
+      UserInfo: UserInfoInterface;
+    }>((resolve, reject) => {
+      APIService.getInstance()
+        .get(`/${email}`)
+        .then((resp) => {
+          resolve({
+            UserInfo: resp.data,
+          });
+        })
+        .catch((error: AxiosError) => {
+          reject(error);
         });
-      })
-      .catch((error: AxiosError) => {
-        reject(error);
-      });
-  });
-});
+    });
+  }
+);
 
 export const UserSlice = createSlice({
   name: "getUserInfo",
