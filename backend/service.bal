@@ -166,6 +166,14 @@ service class ErrorInterceptor {
     label: "Expense Management Dashboard",
     id: "finance/expense-management-dashboard"
 }
+@http:ServiceConfig {
+    cors: {
+        allowOrigins: ["http://localhost:3000"],
+        allowCredentials: true,
+        allowHeaders: ["Authorization", "Content-Type", "x-jwt-assertion", "x-access-token"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }
+}
 service http:InterceptableService / on new http:Listener(9090) {
 
     # Create the interceptors applied to all service requests.
@@ -252,59 +260,48 @@ service http:InterceptableService / on new http:Listener(9090) {
         return buildEffectiveAppConfig();
     }
 
-    # Get user information and privileges for the authenticated user.
+    # Get employee name and thumbnail for the authenticated user from Asgardeo.
     #
     # + ctx - Request context containing authenticated user information
-    # + return - User information response if successful, otherwise an internal server error
-    resource function get user\-info(http:RequestContext ctx) returns UserInfoResponse|http:InternalServerError {
+    # + return - Employee basic info if successful, otherwise an internal server error
+    resource function get [string email](http:RequestContext ctx) returns EmployeeBasicInfo|http:InternalServerError {
         authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
-            return <http:InternalServerError>{
-                body: {
-                    message: "User information header not found!"
-                }
-            };
+            return <http:InternalServerError>{body: {message: "User information header not found!"}};
+        }
+        if userInfo.email != email {
+            return <http:InternalServerError>{body: {message: "Email mismatch!"}};
         }
 
         if cache.hasKey(userInfo.email) {
-            UserInfoResponse|error cachedUserInfo = cache.get(userInfo.email).ensureType();
-            if cachedUserInfo is UserInfoResponse {
-                return cachedUserInfo;
+            EmployeeBasicInfo|error cachedInfo = cache.get(userInfo.email).ensureType();
+            if cachedInfo is EmployeeBasicInfo {
+                return cachedInfo;
             }
         }
 
-        entity:Employee|error loggedInUser = entity:fetchEmployeesBasicInfo(userInfo.email);
-        if loggedInUser is error {
-            string customError = "Error occurred while retrieving user data.";
-            log:printError(customError, loggedInUser);
-            return <http:InternalServerError>{
-                body: {
-                    message: customError
-                }
-            };
+        string firstName = userInfo.firstName;
+        string lastName = userInfo.lastName;
+        string? employeeThumbnail = ();
+
+        string|error accessToken = ctx.getWithType(authorization:HEADER_ACCESS_TOKEN);
+        if accessToken is string && accessToken != "" {
+            entity:Employee|error asgardeoInfo = entity:fetchUserInfoFromAsgardeo(accessToken);
+            if asgardeoInfo is entity:Employee {
+                if asgardeoInfo.firstName != "" { firstName = asgardeoInfo.firstName; }
+                if asgardeoInfo.lastName != "" { lastName = asgardeoInfo.lastName; }
+                employeeThumbnail = asgardeoInfo.employeeThumbnail;
+            } else {
+                log:printError("Failed to fetch user info from Asgardeo", asgardeoInfo);
+            }
         }
 
-        int[] privileges = [];
-        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], userInfo.groups) {
-            privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
-        }
-        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], userInfo.groups) {
-            privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
-        }
-
-        UserInfoResponse userInfoResponse = {
-            workEmail: userInfo.email,
-            firstName: loggedInUser.firstName,
-            lastName: loggedInUser.lastName,
-            employeeThumbnail: loggedInUser.employeeThumbnail,
-            privileges
-        };
-
-        error? cacheError = cache.put(userInfo.email, userInfoResponse);
+        EmployeeBasicInfo result = {workEmail: userInfo.email, firstName, lastName, employeeThumbnail};
+        error? cacheError = cache.put(userInfo.email, result);
         if cacheError is error {
             log:printError("An error occurred while writing user info to the cache", cacheError);
         }
-        return userInfoResponse;
+        return result;
     }
 
     # Get the OPD claim summary for the requested reporting period.
