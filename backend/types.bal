@@ -29,6 +29,14 @@ public type UserInfoResponse record {|
     int[] privileges;
 |};
 
+# Represents the basic employee info returned to the caller.
+public type EmployeeBasicInfo record {|
+    string workEmail;
+    string firstName;
+    string lastName;
+    string? employeeThumbnail;
+|};
+
 # Application configuration returned to the frontend
 public type AppConfig record {|
     # Annual OPD claim limit per employee
