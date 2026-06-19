@@ -30,8 +30,8 @@ export enum Role {
   EMPLOYEE = "EMPLOYEE",
 }
 
-const FINANCE_ADMIN_PRIVILEGE = 762;
-const EMPLOYEE_PRIVILEGE = 987;
+const EMPLOYEE_ROLE = "wso2-interns";
+const FINANCE_ADMIN_ROLE = "wso2-everyone";
 
 interface ExtendedDecodedIDTokenPayload extends DecodedIDTokenPayload {
   groups?: string[];
@@ -64,7 +64,6 @@ export interface UserInfoInterface {
   workEmail: string;
   employeeThumbnail: string | null;
   avatar?: string;
-  privileges: number[];
 }
 
 const initialState: AuthState = {
@@ -79,26 +78,12 @@ const initialState: AuthState = {
 export const loadPrivileges = createAsyncThunk(
   "auth/loadPrivileges",
   (_, { getState, dispatch, rejectWithValue }) => {
-    const { userInfo, state, errorMessage } = (getState() as { user: UserState }).user;
+    const decodedIdToken = (getState() as RootState).auth.decodedIdToken as ExtendedDecodedIDTokenPayload | null;
+    const groups: string[] = decodedIdToken?.groups ?? [];
 
-    if (state === State.failed) {
-      dispatch(
-        enqueueSnackbarMessage({
-          message: SnackMessage.error.fetchPrivileges,
-          type: "error",
-        }),
-      );
-      return rejectWithValue(errorMessage);
-    }
-    const userPrivileges = userInfo?.privileges || [];
     const roles: Role[] = [];
-
-    if (userPrivileges.includes(FINANCE_ADMIN_PRIVILEGE)) {
-      roles.push(Role.ADMIN);
-    }
-    if (userPrivileges.includes(EMPLOYEE_PRIVILEGE)) {
-      roles.push(Role.EMPLOYEE);
-    }
+    if (groups.includes(EMPLOYEE_ROLE)) roles.push(Role.EMPLOYEE);
+    if (groups.includes(FINANCE_ADMIN_ROLE)) roles.push(Role.ADMIN);
 
     if (roles.length === 0) {
       dispatch(
