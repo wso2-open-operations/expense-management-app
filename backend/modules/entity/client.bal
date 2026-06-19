@@ -39,4 +39,4 @@ isolated function buildHrClientConfig(Oauth2Config? cfg) returns http:ClientConf
 final http:Client hrClient = check new (hrEntityBaseUrl, buildHrClientConfig(oauthConfig));
 
 # HTTP client for the Asgardeo userinfo endpoint.
-final http:Client asgardeoClient = check new ("https://api.asgardeo.io");
+final http:Client asgardeoClient = check new (asgardeoUserInfoUrl);
