@@ -32,7 +32,7 @@ declare global {
 }
 
 export const AsgardeoConfig: BaseURLAuthClientConfig = {
-  scope: ["openid", "email", "groups"],
+  scope: ["openid", "email", "groups", "profile"],
   baseUrl: window.config?.ASGARDEO_BASE_URL ?? "",
   clientID: window.config?.ASGARDEO_CLIENT_ID ?? "",
   signInRedirectURL: window.config?.AUTH_SIGN_IN_REDIRECT_URL ?? "",
@@ -61,7 +61,7 @@ export const ServiceBaseUrl = window.config?.REACT_APP_BACKEND_BASE_URL ?? "";
 export const AppConfig = {
   serviceUrls: {
     contacts: "/contacts",
-    userInfo: "/user-info",
+    userInfo: "/employees/me",
     employees: "/employees",
     appConfig: "/app-config",
     collections: "/collections",
