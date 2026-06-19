@@ -37,12 +37,12 @@ export class APIService {
   private static _accessToken: string;
   private static _cancelTokenSource = axios.CancelToken.source();
   private static _cancelTokenMap: Map<string, CancelTokenSource> = new Map();
-  private static callback: () => Promise<{ accessToken: string }>;
+  private static callback: () => Promise<{ idToken: string; accessToken: string }>;
 
   private static _isRefreshing = false;
-  private static _refreshPromise: Promise<{ accessToken: string }> | null = null;
+  private static _refreshPromise: Promise<{ idToken: string; accessToken: string }> | null = null;
 
-  constructor(idToken: string, accessToken: string, callback: () => Promise<{ accessToken: string }>) {
+  constructor(idToken: string, accessToken: string, callback: () => Promise<{ idToken: string; accessToken: string }>) {
     APIService._instance = axios.create({
       baseURL: ServiceBaseUrl,
     });
@@ -66,7 +66,7 @@ export class APIService {
           APIService._isRefreshing = true;
           APIService._refreshPromise = APIService.callback()
             .then((res) => {
-              APIService.updateTokens(res.accessToken);
+              APIService.updateTokens(res.idToken, res.accessToken);
               APIService._instance.interceptors.request.clear();
               APIService.updateRequestInterceptor();
               return res;
@@ -132,8 +132,9 @@ export class APIService {
     return APIService._instance.delete<T>(url, config);
   }
 
-  private static updateTokens(idToken: string) {
+  private static updateTokens(idToken: string, accessToken: string) {
     APIService._idToken = idToken;
+    APIService._accessToken = accessToken;
   }
 
   private static updateRequestInterceptor() {
