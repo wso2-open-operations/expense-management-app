@@ -34,6 +34,7 @@ interface RequestConfigWithLoader extends AxiosRequestConfig {
 export class APIService {
   private static _instance: AxiosInstance;
   private static _idToken: string;
+  private static _accessToken: string;
   private static _cancelTokenSource = axios.CancelToken.source();
   private static _cancelTokenMap: Map<string, CancelTokenSource> = new Map();
   private static callback: () => Promise<{ accessToken: string }>;
@@ -41,13 +42,14 @@ export class APIService {
   private static _isRefreshing = false;
   private static _refreshPromise: Promise<{ accessToken: string }> | null = null;
 
-  constructor(idToken: string, callback: () => Promise<{ accessToken: string }>) {
+  constructor(idToken: string, accessToken: string, callback: () => Promise<{ accessToken: string }>) {
     APIService._instance = axios.create({
       baseURL: ServiceBaseUrl,
     });
     rax.attach(APIService._instance);
 
     APIService._idToken = idToken;
+    APIService._accessToken = accessToken;
     APIService.callback = callback;
 
     APIService.updateRequestInterceptor();
@@ -150,12 +152,18 @@ export class APIService {
           typeof (config.headers as { set?: (k: string, v: string) => void }).set === "function"
         ) {
           (config.headers as { set: (k: string, v: string) => void }).set(
-            "Authorization",
-            `Bearer ${APIService._idToken}`,
+            "x-jwt-assertion",
+            `${APIService._idToken}`
+          );
+          (config.headers as { set: (k: string, v: string) => void }).set(
+            "x-access-token",
+            `${APIService._accessToken}`
           );
         } else {
-          (config.headers as Record<string, string>)["Authorization"] =
-            `Bearer ${APIService._idToken}`;
+          (config.headers as Record<string, string>)["x-jwt-assertion"] =
+            `${APIService._idToken}`;
+          (config.headers as Record<string, string>)["x-access-token"] =
+            `${APIService._accessToken}`;
         }
 
         const endpointKey = [
