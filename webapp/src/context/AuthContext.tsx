@@ -18,7 +18,7 @@ import axios from "axios";
 import { useAuthContext } from "@asgardeo/auth-react";
 import { useIdleTimer } from "react-idle-timer";
 
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import BackgroundLoader from "@component/common/BackgroundLoader";
 import SessionWarningDialog from "@component/common/SessionWarningDialog";
@@ -29,18 +29,13 @@ import { useAppDispatch } from "@slices/store";
 import { getUserInfo } from "@slices/userSlice/user";
 import { APIService } from "@utils/apiService";
 
-type AuthContextType = {
-  appSignIn: () => void;
-  appSignOut: () => void;
-};
+import { AppAuthContext, type AuthContextType } from "./authContextDef";
 
 enum AppState {
   Loading = "loading",
   Unauthenticated = "unauthenticated",
   Authenticated = "authenticated",
 }
-
-const AuthContext = React.createContext<AuthContextType>({} as AuthContextType);
 
 const timeout = 15 * 60 * 1000;
 const promptBeforeIdle = 4_000;
@@ -130,10 +125,11 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
   }, [state.isAuthenticated, getIDToken, refreshAccessToken, getAccessToken, appSignOut]);
 
   const setupAuthenticatedUser = useCallback(async () => {
-    const [userInfo, idToken, decodedIdToken] = await Promise.all([
+    const [userInfo, idToken, decodedIdToken, accessToken] = await Promise.all([
       getBasicUserInfo(),
       getIDToken(),
       getDecodedIDToken(),
+      getAccessToken(),
     ]);
 
     dispatch(
@@ -143,11 +139,12 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
       }),
     );
 
-    new APIService(idToken, refreshToken);
+    new APIService(idToken, accessToken, refreshToken);
 
-    await dispatch(getUserInfo()).unwrap();
-    await dispatch(loadPrivileges()).unwrap();
-    await dispatch(fetchAppConfig()).unwrap();
+    await Promise.all([
+      dispatch(getUserInfo(userInfo.email ?? "")).unwrap().then(() => dispatch(loadPrivileges()).unwrap()),
+      dispatch(fetchAppConfig()).unwrap(),
+    ]);
   }, [getBasicUserInfo, getIDToken, getDecodedIDToken, dispatch, refreshToken]);
 
   const appSignIn = useCallback(async () => {
@@ -286,13 +283,13 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
         return <BackgroundLoader loading />;
 
       case AppState.Authenticated:
-        return <AuthContext.Provider value={authContext}>{props.children}</AuthContext.Provider>;
+        return <AppAuthContext.Provider value={authContext}>{props.children}</AppAuthContext.Provider>;
 
       case AppState.Unauthenticated:
         return (
-          <AuthContext.Provider value={authContext}>
+          <AppAuthContext.Provider value={authContext}>
             <BackgroundLoader loading />
-          </AuthContext.Provider>
+          </AppAuthContext.Provider>
         );
 
       default:
@@ -311,8 +308,5 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
     </>
   );
 };
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAppAuthContext = (): AuthContextType => useContext(AuthContext);
 
 export default AppAuthProvider;
