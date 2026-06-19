@@ -41,10 +41,16 @@ public isolated function fetchUserInfoFromAsgardeo(string accessToken) returns E
         return error("Failed to parse Asgardeo userinfo response");
     }
 
+    string email = info.email ?: "";
+    if email.trim().length() == 0 {
+        return error("Asgardeo userinfo response missing email field");
+    }
+
     return {
         firstName: info.given_name ?: "",
         lastName: info.family_name ?: "",
-        employeeThumbnail: info.picture
+        employeeThumbnail: info.picture,
+        email: email
     };
 }
 
