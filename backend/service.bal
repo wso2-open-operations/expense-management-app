@@ -264,14 +264,14 @@ service http:InterceptableService / on new http:Listener(9090) {
     # Get employee name and thumbnail for the authenticated user from Asgardeo.
     #
     # + ctx - Request context containing authenticated user information
-    # + return - Employee basic info if successful, otherwise an internal server error
-    resource function get [string email](http:RequestContext ctx) returns EmployeeBasicInfo|http:InternalServerError {
+    # + return - Employee basic info if successful, otherwise a forbidden error
+    resource function get [string email](http:RequestContext ctx) returns EmployeeBasicInfo|http:Forbidden|http:InternalServerError {
         authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:InternalServerError>{body: {message: "User information header not found!"}};
         }
         if userInfo.email != email {
-            return <http:InternalServerError>{body: {message: "Email mismatch!"}};
+            return <http:Forbidden>{body: {message: "Email mismatch!"}};
         }
 
         if cache.hasKey(userInfo.email) {
