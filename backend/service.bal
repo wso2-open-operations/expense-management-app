@@ -288,6 +288,9 @@ service http:InterceptableService / on new http:Listener(9090) {
         if accessToken is string && accessToken != "" {
             entity:Employee|error asgardeoInfo = entity:fetchUserInfoFromAsgardeo(accessToken);
             if asgardeoInfo is entity:Employee {
+                if asgardeoInfo.email != userInfo.email {
+                    return <http:InternalServerError>{body: {message: "Asgardeo subject email does not match authenticated user."}};
+                }
                 if asgardeoInfo.firstName != "" { firstName = asgardeoInfo.firstName; }
                 if asgardeoInfo.lastName != "" { lastName = asgardeoInfo.lastName; }
                 employeeThumbnail = asgardeoInfo.employeeThumbnail;
