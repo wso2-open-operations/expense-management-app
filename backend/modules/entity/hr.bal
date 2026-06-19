@@ -13,8 +13,40 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/http;
+
+# Asgardeo userinfo response fields used for employee profile.
+type AsgardeoUserInfo record {
+    string? given_name = ();
+    string? family_name = ();
+    string? picture = ();
+    string? email = ();
+};
+
+# Fetch the logged-in user's name and profile picture from the Asgardeo userinfo endpoint.
+#
+# + accessToken - Bearer access token from the frontend
+# + return - Employee details if successful, otherwise an error
+public isolated function fetchUserInfoFromAsgardeo(string accessToken) returns Employee|error {
+    map<string|string[]> headers = {"Authorization": "Bearer " + accessToken};
+    http:Response response = check asgardeoClient->get("/t/wso2/oauth2/userinfo", headers);
+
+    if response.statusCode < 200 || response.statusCode >= 300 {
+        return error(string `Asgardeo userinfo request failed with status ${response.statusCode}`);
+    }
+
+    json payload = check response.getJsonPayload();
+    AsgardeoUserInfo|error info = payload.cloneWithType();
+    if info is error {
+        return error("Failed to parse Asgardeo userinfo response");
+    }
+
+    return {
+        firstName: info.given_name ?: "",
+        lastName: info.family_name ?: "",
+        employeeThumbnail: info.picture
+    };
+}
 
 # Fetch basic employee details for the given work email from the HR entity service.
 #
