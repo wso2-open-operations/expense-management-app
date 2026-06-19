@@ -20,14 +20,22 @@ public type CustomJwtPayload record {
     string email;
     # Group or role names assigned to the authenticated user
     string|string[] groups = [];
+    # First name from profile scope (matches JWT claim "given_name")
+    string? given_name = ();
+    # Last name from profile scope (matches JWT claim "family_name")
+    string? family_name = ();
 };
 
-# Normalized user information stored in the request context after JWT validation.
-public type UserInfo record {|
+# Normalized profile data extracted directly from Asgardeo
+public type AsgardeoProfile record {|
     # Work email address of the authenticated user
     string email;
     # Normalized group names assigned to the authenticated user
     string[] groups = [];
+    # First name extracted from Asgardeo
+    string firstName = "";
+    # Last name extracted from Asgardeo
+    string lastName = "";
 |};
 
 # Application-specific role names used for authorization checks.
@@ -37,3 +45,7 @@ public type AppRoles record {|
     # Role granted to finance administrators
     string financeAdminRole;
 |};
+
+# Type alias mapping the legacy UserInfo name to the new AsgardeoProfile structure.
+# This resolves references in service.bal without requiring a massive refactor.
+public type UserInfo AsgardeoProfile;
