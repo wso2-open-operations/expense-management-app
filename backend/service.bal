@@ -167,14 +167,6 @@ service class ErrorInterceptor {
     label: "Expense Management Dashboard",
     id: "finance/expense-management-dashboard"
 }
-@http:ServiceConfig {
-    cors: {
-        allowOrigins: corsAllowOrigins,
-        allowCredentials: true,
-        allowHeaders: ["Authorization", "Content-Type", "x-jwt-assertion", "x-access-token"],
-        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    }
-}
 service http:InterceptableService / on new http:Listener(9090) {
 
     # Create the interceptors applied to all service requests.
