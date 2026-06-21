@@ -19,7 +19,7 @@ import ballerina/http;
 type AsgardeoUserInfo record {
     string? given_name = ();
     string? family_name = ();
-    string? picture = ();
+    string? thumbnail = ();
     string? email = ();
 };
 
