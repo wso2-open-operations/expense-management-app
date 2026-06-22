@@ -17,19 +17,11 @@ import expense_management.authorization;
 import expense_management.database;
 import expense_management.entity;
 
-import ballerina/cache;
 import ballerina/http;
 import ballerina/log;
 import ballerina/time;
 
 public configurable AppConfig appConfig = ?;
-public configurable string[] corsAllowOrigins = ["http://localhost:3000"];
-
-final cache:Cache cache = new ({
-    capacity: CACHE_CAPACITY,
-    defaultMaxAge: CACHE_DEFAULT_MAX_AGE,
-    cleanupInterval: CACHE_CLEANUP_INTERVAL
-});
 
 isolated function extractUserInfo(http:RequestContext ctx) returns authorization:UserInfo|http:BadRequest {
     authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
@@ -251,53 +243,6 @@ service http:InterceptableService / on new http:Listener(9090) {
         }
 
         return buildEffectiveAppConfig();
-    }
-
-    # Get employee name and thumbnail for the authenticated user from Asgardeo.
-    #
-    # + ctx - Request context containing authenticated user information
-    # + return - Employee basic info if successful, otherwise a forbidden error
-    resource function get [string email](http:RequestContext ctx) returns EmployeeBasicInfo|http:Forbidden|http:InternalServerError {
-        authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
-        if userInfo is error {
-            return <http:InternalServerError>{body: {message: "User information header not found!"}};
-        }
-        if userInfo.email != email {
-            return <http:Forbidden>{body: {message: "Email mismatch!"}};
-        }
-
-        if cache.hasKey(userInfo.email) {
-            EmployeeBasicInfo|error cachedInfo = cache.get(userInfo.email).ensureType();
-            if cachedInfo is EmployeeBasicInfo {
-                return cachedInfo;
-            }
-        }
-
-        string firstName = userInfo.firstName;
-        string lastName = userInfo.lastName;
-        string? employeeThumbnail = ();
-
-        string|error accessToken = ctx.getWithType(authorization:HEADER_ACCESS_TOKEN);
-        if accessToken is string && accessToken != "" {
-            entity:Employee|error asgardeoInfo = entity:fetchUserInfoFromAsgardeo(accessToken);
-            if asgardeoInfo is entity:Employee {
-                if asgardeoInfo.email != userInfo.email {
-                    return <http:InternalServerError>{body: {message: "Asgardeo subject email does not match authenticated user."}};
-                }
-                if asgardeoInfo.firstName != "" { firstName = asgardeoInfo.firstName; }
-                if asgardeoInfo.lastName != "" { lastName = asgardeoInfo.lastName; }
-                employeeThumbnail = asgardeoInfo.employeeThumbnail;
-            } else {
-                log:printError("Failed to fetch user info from Asgardeo", asgardeoInfo);
-            }
-        }
-
-        EmployeeBasicInfo result = {workEmail: userInfo.email, firstName, lastName, employeeThumbnail};
-        error? cacheError = cache.put(userInfo.email, result);
-        if cacheError is error {
-            log:printError("An error occurred while writing user info to the cache", cacheError);
-        }
-        return result;
     }
 
     # Get the OPD claim summary for the requested reporting period.

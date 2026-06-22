@@ -26,7 +26,7 @@ import { redirectUrl } from "@config/constant";
 import { loadPrivileges, setAuthError, setUserAuthData } from "@slices/authSlice/auth";
 import { fetchAppConfig } from "@slices/configSlice/config";
 import { useAppDispatch } from "@slices/store";
-import { getUserInfo } from "@slices/userSlice/user";
+import { setUserInfoFromClaims } from "@slices/userSlice/user";
 import { APIService } from "@utils/apiService";
 
 import { AppAuthContext, type AuthContextType } from "./authContextDef";
@@ -138,8 +138,17 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
 
     new APIService(idToken, accessToken, refreshToken);
 
+    dispatch(
+      setUserInfoFromClaims({
+        firstName: (decodedIdToken.given_name as string | undefined) ?? (userInfo.firstName ?? ""),
+        lastName: (decodedIdToken.family_name as string | undefined) ?? (userInfo.lastName ?? ""),
+        workEmail: userInfo.email ?? "",
+        employeeThumbnail: (decodedIdToken.picture as string | undefined) ?? null,
+      }),
+    );
+
     await Promise.all([
-      dispatch(getUserInfo(userInfo.email ?? "")).unwrap().then(() => dispatch(loadPrivileges()).unwrap()),
+      dispatch(loadPrivileges()).unwrap(),
       dispatch(fetchAppConfig()).unwrap(),
     ]);
   }, [getBasicUserInfo, getIDToken, getDecodedIDToken, dispatch, refreshToken]);

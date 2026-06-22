@@ -14,11 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { type PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { AxiosError } from "axios";
+import { type PayloadAction, createSlice } from "@reduxjs/toolkit";
 
 import type { UserInfoInterface, UserState } from "@slices/authSlice/auth";
-import { APIService } from "@utils/apiService";
 
 import { State } from "../../types/types";
 
@@ -29,26 +27,6 @@ const initialState: UserState = {
   userInfo: null,
 };
 
-export const getUserInfo = createAsyncThunk(
-  "user/getUserInfo",
-  async (email: string) => {
-    return new Promise<{
-      UserInfo: UserInfoInterface;
-    }>((resolve, reject) => {
-      APIService.getInstance()
-        .get(`/${email}`)
-        .then((resp) => {
-          resolve({
-            UserInfo: resp.data,
-          });
-        })
-        .catch((error: AxiosError) => {
-          reject(error);
-        });
-    });
-  }
-);
-
 export const UserSlice = createSlice({
   name: "getUserInfo",
   initialState,
@@ -56,29 +34,13 @@ export const UserSlice = createSlice({
     updateStateMessage: (state, action: PayloadAction<string>) => {
       state.stateMessage = action.payload;
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(getUserInfo.pending, (state) => {
-        state.state = State.loading;
-        state.stateMessage = "Checking User Info...";
-      })
-      .addCase(getUserInfo.fulfilled, (state, action) => {
-        state.userInfo = action.payload.UserInfo;
-        state.state = State.success;
-      })
-      .addCase(getUserInfo.rejected, (state, action) => {
-        state.state = State.failed;
-        if (action.error.code === AxiosError.ERR_BAD_REQUEST) {
-          state.errorMessage =
-            "Oops! Looks like you are not authorized to access this application.";
-        } else {
-          state.errorMessage = "Something went wrong while authenticating the user.";
-        }
-      });
+    setUserInfoFromClaims: (state, action: PayloadAction<UserInfoInterface>) => {
+      state.userInfo = action.payload;
+      state.state = State.success;
+    },
   },
 });
 
-export const { updateStateMessage } = UserSlice.actions;
+export const { updateStateMessage, setUserInfoFromClaims } = UserSlice.actions;
 
 export default UserSlice.reducer;

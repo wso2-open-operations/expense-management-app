@@ -17,8 +17,6 @@ import ballerina/http;
 
 configurable string hrEntityBaseUrl = ?;
 configurable Oauth2Config? oauthConfig = ();
-configurable string asgardeoUserInfoUrl = "https://api.asgardeo.io/t/wso2/oauth2/userinfo";
-
 isolated function buildHrClientConfig(Oauth2Config? cfg) returns http:ClientConfiguration {
     if cfg is Oauth2Config {
         http:OAuth2ClientCredentialsGrantConfig authConfig = {
@@ -38,5 +36,3 @@ isolated function buildHrClientConfig(Oauth2Config? cfg) returns http:ClientConf
 }
 final http:Client hrClient = check new (hrEntityBaseUrl, buildHrClientConfig(oauthConfig));
 
-# HTTP client for the Asgardeo userinfo endpoint.
-final http:Client asgardeoClient = check new (asgardeoUserInfoUrl);
