@@ -49,3 +49,4 @@ public type AppRoles record {|
 # Type alias mapping the legacy UserInfo name to the new AsgardeoProfile structure.
 # This resolves references in service.bal without requiring a massive refactor.
 public type UserInfo AsgardeoProfile;
+
