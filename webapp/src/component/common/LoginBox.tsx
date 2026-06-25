@@ -20,7 +20,7 @@ import { ArrowRight } from "@wso2/oxygen-ui-icons-react";
 
 import { type JSX, useState } from "react";
 
-import { useAppAuthContext } from "@context/useAppAuthContext";
+import { useAppAuthContext } from "@context/AuthContext";
 
 export default function LoginBox(): JSX.Element {
   const [error] = useState(false);
