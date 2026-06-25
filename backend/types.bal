@@ -15,19 +15,15 @@
 // under the License.
 import ballerina/http;
 
-# Represents the response structure for retrieving user information.
-public type UserInfoResponse record {|
-    # Email of the employee
-    string workEmail;
-    # First name of the employee
-    string firstName;
-    # Last name of the employee
-    string lastName;
-    # Thumbnail of the employee
-    string? employeeThumbnail;
-    # User privileges
-    int[] privileges;
-|};
+// NOTE: UserInfoResponse removed — no longer needed since the /user-info endpoint is unused.
+// The frontend reads these fields directly from the Asgardeo JWT.
+// public type UserInfoResponse record {|
+//     string workEmail;
+//     string firstName;
+//     string lastName;
+//     string? employeeThumbnail;
+//     int[] privileges;
+// |};
 
 # Application configuration returned to the frontend
 public type AppConfig record {|

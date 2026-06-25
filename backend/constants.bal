@@ -29,3 +29,6 @@ public const int TOP_EMPLOYEES_LIMIT = 7;
 public const int TOP_LEADS_LIMIT = 7;
 public const int EXPENSE_TYPES_FETCH_LIMIT = 500;
 
+public const int CACHE_CAPACITY = 2000;
+public const decimal CACHE_DEFAULT_MAX_AGE = 1800.0d;   // 30 minutes
+public const decimal CACHE_CLEANUP_INTERVAL = 900.0d;   // 15 minutes
