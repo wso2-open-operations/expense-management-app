@@ -34,6 +34,9 @@ export const UserSlice = createSlice({
     updateStateMessage: (state, action: PayloadAction<string>) => {
       state.stateMessage = action.payload;
     },
+
+    
+    // Handles the user profile data directly from Asgardeo SDK
     setUserInfoFromClaims: (state, action: PayloadAction<UserInfoInterface>) => {
       state.userInfo = action.payload;
       state.state = State.success;

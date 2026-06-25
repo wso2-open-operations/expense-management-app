@@ -1,41 +1,30 @@
-// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
-//
-// WSO2 LLC. licenses this file to you under the Apache License,
-// Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 import axios from "axios";
 import { useAuthContext } from "@asgardeo/auth-react";
 import { useIdleTimer } from "react-idle-timer";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import BackgroundLoader from "@component/common/BackgroundLoader";
 import SessionWarningDialog from "@component/common/SessionWarningDialog";
 import { redirectUrl } from "@config/constant";
 import { loadPrivileges, setAuthError, setUserAuthData } from "@slices/authSlice/auth";
-import { fetchAppConfig } from "@slices/configSlice/config";
 import { useAppDispatch } from "@slices/store";
+
 import { setUserInfoFromClaims } from "@slices/userSlice/user";
 import { APIService } from "@utils/apiService";
 
-import { AppAuthContext, type AuthContextType } from "./authContextDef";
+type AuthContextType = {
+  appSignIn: () => void;
+  appSignOut: () => void;
+};
 
 enum AppState {
   Loading = "loading",
   Unauthenticated = "unauthenticated",
   Authenticated = "authenticated",
 }
+
+const AuthContext = React.createContext<AuthContextType>({} as AuthContextType);
 
 const timeout = 15 * 60 * 1000;
 const promptBeforeIdle = 4_000;
@@ -107,19 +96,22 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
     setAppState(AppState.Unauthenticated);
   }, [signOut]);
 
-  const refreshToken = useCallback(async (): Promise<{ idToken: string; accessToken: string }> => {
+  const refreshToken = useCallback(async (): Promise<{ accessToken: string }> => {
+    if (state.isAuthenticated) {
+      const accessToken = await getIDToken();
+      return { accessToken };
+    }
+
     try {
-      if (!state.isAuthenticated) {
-        await refreshAccessToken();
-      }
-      const [idToken, accessToken] = await Promise.all([getIDToken(), getAccessToken()]);
-      return { idToken, accessToken };
+      await refreshAccessToken();
+      const accessToken = await getAccessToken();
+      return { accessToken };
     } catch (error) {
       console.error("Token refresh failed: ", error);
       await appSignOut();
       throw error;
     }
-  }, [state.isAuthenticated, getIDToken, getAccessToken, refreshAccessToken, appSignOut]);
+  }, [state.isAuthenticated, getIDToken, refreshAccessToken, getAccessToken, appSignOut]);
 
   const setupAuthenticatedUser = useCallback(async () => {
     const [userInfo, idToken, decodedIdToken, accessToken] = await Promise.all([
@@ -136,22 +128,42 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
       }),
     );
 
-    new APIService(idToken, accessToken, refreshToken);
+    new APIService(idToken, refreshToken);
 
-    dispatch(
-      setUserInfoFromClaims({
-        firstName: (decodedIdToken.given_name as string | undefined) ?? (userInfo.firstName ?? ""),
-        lastName: (decodedIdToken.family_name as string | undefined) ?? (userInfo.lastName ?? ""),
-        workEmail: userInfo.email ?? "",
-        employeeThumbnail: (decodedIdToken.picture as string | undefined) ?? null,
-      }),
-    );
+    const tokenPayload = JSON.parse(atob(accessToken.split(".")[1])) as { groups?: string[] };
+const groups = tokenPayload.groups ?? decodedIdToken.groups ?? [];
+    const privileges: number[] = [];
+    if (groups.includes("wso2-interns")) privileges.push(987);
+    if (groups.includes("wso2-everyone")) privileges.push(762);
 
-    await Promise.all([
-      dispatch(loadPrivileges()).unwrap(),
-      dispatch(fetchAppConfig()).unwrap(),
-    ]);
-  }, [getBasicUserInfo, getIDToken, getDecodedIDToken, dispatch, refreshToken]);
+// ==========================================
+    // DEBUG CONSOLE LOG: Check extracted properties
+    // ==========================================
+    // console.log("%c--- ASGARDEO FRONTEND USER INFO OBJECT ---", "color: #00ff00; font-weight: bold;");
+    // console.log("Full Object Data:", userInfo);
+    // console.log("Extracted given_name (First Name):", userInfo?.givenName);
+    // console.log("Extracted family_name (Last Name):", userInfo?.familyName);
+    // console.log("Extracted profile / picture (Thumbnail) field:", userInfo?.picture || userInfo?.profile);
+    // console.log("==========================================");
+
+
+    if (userInfo) {
+      dispatch(
+
+        setUserInfoFromClaims({
+          //we simply extract those claims from the token and instantly pushing
+          // to the redux store for further usage in the app
+          workEmail: userInfo.email || state.email || "",
+          firstName: userInfo.givenName || "",
+          lastName: userInfo.familyName || "",
+          employeeThumbnail: userInfo.picture || "",
+          privileges,
+        })
+      );
+    }
+
+    dispatch(loadPrivileges());
+  }, [getBasicUserInfo, getIDToken, getDecodedIDToken, getAccessToken, state.email, dispatch, refreshToken]);
 
   const appSignIn = useCallback(async () => {
     if (signInFailedRef.current || signInAttemptsRef.current >= MAX_SIGN_IN_ATTEMPTS) {
@@ -289,13 +301,13 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
         return <BackgroundLoader loading />;
 
       case AppState.Authenticated:
-        return <AppAuthContext.Provider value={authContext}>{props.children}</AppAuthContext.Provider>;
+        return <AuthContext.Provider value={authContext}>{props.children}</AuthContext.Provider>;
 
       case AppState.Unauthenticated:
         return (
-          <AppAuthContext.Provider value={authContext}>
+          <AuthContext.Provider value={authContext}>
             <BackgroundLoader loading />
-          </AppAuthContext.Provider>
+          </AuthContext.Provider>
         );
 
       default:
@@ -314,5 +326,8 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
     </>
   );
 };
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAppAuthContext = (): AuthContextType => useContext(AuthContext);
 
 export default AppAuthProvider;
