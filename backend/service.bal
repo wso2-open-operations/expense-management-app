@@ -17,11 +17,18 @@ import expense_management.authorization;
 import expense_management.database;
 import expense_management.entity;
 
+import ballerina/cache;
 import ballerina/http;
 import ballerina/log;
 import ballerina/time;
 
 public configurable AppConfig appConfig = ?;
+
+final cache:Cache cache = new ({
+    capacity: CACHE_CAPACITY,
+    defaultMaxAge: CACHE_DEFAULT_MAX_AGE,
+    cleanupInterval: CACHE_CLEANUP_INTERVAL
+});
 
 isolated function extractUserInfo(http:RequestContext ctx) returns authorization:UserInfo|http:BadRequest {
     authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
@@ -244,6 +251,48 @@ service http:InterceptableService / on new http:Listener(9090) {
 
         return buildEffectiveAppConfig();
     }
+
+    // NOTE: user-info endpoint removed — frontend now reads workEmail, firstName, lastName,
+    // and employeeThumbnail directly from the Asgardeo JWT via the SDK (no backend call needed).
+    // resource function get user\-info(http:RequestContext ctx) returns UserInfoResponse|http:InternalServerError {
+    //     authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+    //     if userInfo is error {
+    //         return <http:InternalServerError>{
+    //             body: {
+    //                 message: "User information header not found!"
+    //             }
+    //         };
+    //     }
+    //
+    //     if cache.hasKey(userInfo.email) {
+    //         UserInfoResponse|error cachedUserInfo = cache.get(userInfo.email).ensureType();
+    //         if cachedUserInfo is UserInfoResponse {
+    //             return cachedUserInfo;
+    //         }
+    //     }
+    //
+    //     int[] privileges = [];
+    //     if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], userInfo.groups) {
+    //         privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
+    //     }
+    //     if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], userInfo.groups) {
+    //         privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
+    //     }
+    //
+    //     UserInfoResponse userInfoResponse = {
+    //         workEmail: userInfo.email,
+    //         firstName: userInfo.givenName,
+    //         lastName: userInfo.familyName,
+    //         employeeThumbnail: userInfo.thumbnail,
+    //         privileges
+    //     };
+    //
+    //     error? cacheError = cache.put(userInfo.email, userInfoResponse);
+    //     if cacheError is error {
+    //         log:printError("An error occurred while writing user info to the cache", cacheError);
+    //     }
+    //     return userInfoResponse;
+    // }
 
     # Get the OPD claim summary for the requested reporting period.
     #

@@ -32,11 +32,6 @@ public isolated service class JwtInterceptor {
     isolated resource function default [string... path](http:RequestContext ctx, http:Request req)
         returns http:NextService|http:Forbidden|http:InternalServerError|error? {
 
-        if req.method == http:OPTIONS {
-            return ctx.next();
-        }
-
-        log:printInfo(req.getHeaderNames().toString());
         string|error idToken = req.getHeader(JWT_ASSERTION_HEADER);
 
         if idToken is error {
@@ -56,29 +51,28 @@ public isolated service class JwtInterceptor {
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        CustomJwtPayload|error userInfo = result[1].cloneWithType(CustomJwtPayload);
-        if userInfo is error {
+        // 1. CHANGED: Now cloning with AsgardeoProfile instead of CustomJwtPayload
+        AsgardeoProfile|error profileInfo = result[1].cloneWithType(AsgardeoProfile);
+        if profileInfo is error {
             string errorMsg = "Malformed Invoker info object!";
-            log:printError(errorMsg, userInfo);
+            log:printError(errorMsg, profileInfo);
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        string|string[] groups = userInfo.groups;
+        string|string[] groups = profileInfo.groups;
         
-        AsgardeoProfile asgardeoProfile = {
-            email: userInfo.email,
+        // 2. CHANGED: Added givenName, familyName, and mapped profile to thumbnail
+        UserInfo userInfoHeader = {
+            email: profileInfo.email,
             groups: groups is string[] ? groups : [groups],
-            firstName: userInfo.given_name ?: "",
-            lastName: userInfo.family_name ?: ""
+            givenName: profileInfo.given_name,
+            familyName: profileInfo.family_name,
+            thumbnail: profileInfo?.profile ?: null
         };
-        
-        string|error accessTokenHeader = req.getHeader(ACCESS_TOKEN_HEADER);
-        string accessToken = accessTokenHeader is string ? accessTokenHeader : "";
-        ctx.set(HEADER_ACCESS_TOKEN, accessToken);
 
         foreach anydata role in authorizedRoles.toArray() {
-            if asgardeoProfile.groups.some(r => r === role) {
-                ctx.set(HEADER_USER_INFO, asgardeoProfile);
+            if userInfoHeader.groups.some(r => r === role) {
+                ctx.set(HEADER_USER_INFO, userInfoHeader);
                 return ctx.next();
             }
         }

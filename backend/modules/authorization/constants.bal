@@ -16,9 +16,7 @@
 
 // Authorization Constants.
 public const JWT_ASSERTION_HEADER = "x-jwt-assertion";
-public const ACCESS_TOKEN_HEADER = "x-access-token";
 public const HEADER_USER_INFO = "user-info";
-public const HEADER_ACCESS_TOKEN = "access-token";
 
 # Privileges.
 public const EMPLOYEE_ROLE_PRIVILEGE = 987;

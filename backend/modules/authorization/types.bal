@@ -1,41 +1,36 @@
-// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
-//
-// WSO2 LLC. licenses this file to you under the Apache License,
-// Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
+import ballerina/jwt;
 
-# User information extracted from the Asgardeo JWT assertion.
+# User information extracted from the Asgardeo JWT assertion (Minimal version).
 public type CustomJwtPayload record {
     # Work email address of the authenticated user
     string email;
     # Group or role names assigned to the authenticated user
     string|string[] groups = [];
-    # First name from profile scope (matches JWT claim "given_name")
-    string? given_name = ();
-    # Last name from profile scope (matches JWT claim "family_name")
-    string? family_name = ();
 };
 
-# Normalized profile data extracted directly from Asgardeo
-public type AsgardeoProfile record {|
+# Full profile data extracted directly from Asgardeo (Including thumbnail).
+public type AsgardeoProfile record {
+    *jwt:Payload;
+
     # Work email address of the authenticated user
     string email;
     # Normalized group names assigned to the authenticated user
-    string[] groups = [];
+    string|string[] groups;
     # First name extracted from Asgardeo
-    string firstName = "";
+    string given_name;
     # Last name extracted from Asgardeo
-    string lastName = "";
+    string family_name;
+    # Optional profile thumbnail URL or string
+    string profile?;
+};
+
+# Normalized User Info stored in the request context for your application logic
+public type UserInfo record {|
+    string email;
+    string[] groups;
+    string givenName;
+    string familyName;
+    string? thumbnail; // Maps to the 'profile' field from Asgardeo
 |};
 
 # Application-specific role names used for authorization checks.
@@ -45,8 +40,3 @@ public type AppRoles record {|
     # Role granted to finance administrators
     string financeAdminRole;
 |};
-
-# Type alias mapping the legacy UserInfo name to the new AsgardeoProfile structure.
-# This resolves references in service.bal without requiring a massive refactor.
-public type UserInfo AsgardeoProfile;
-
