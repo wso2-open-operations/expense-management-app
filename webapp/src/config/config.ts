@@ -61,9 +61,10 @@ export const ServiceBaseUrl = window.config?.REACT_APP_BACKEND_BASE_URL ?? "";
 export const AppConfig = {
   serviceUrls: {
     contacts: "/contacts",
-    userInfo: "/user-info",
+    userPrivileges: "/user-privileges",
     employees: "/employees",
     appConfig: "/app-config",
     collections: "/collections",
   },
 };
+
