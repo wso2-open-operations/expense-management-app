@@ -77,10 +77,8 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
   const {
     signIn,
     signOut,
-    getDecodedIDToken,
     getBasicUserInfo,
     refreshAccessToken,
-    getIDToken,
     getAccessToken,
     state,
   } = useAuthContext();
@@ -115,7 +113,7 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
 
   const refreshToken = useCallback(async (): Promise<{ accessToken: string }> => {
     if (state.isAuthenticated) {
-      const accessToken = await getIDToken();
+      const accessToken = await getAccessToken();
       return { accessToken };
     }
 
@@ -128,21 +126,17 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
       await appSignOut();
       throw error;
     }
-  }, [state.isAuthenticated, getIDToken, refreshAccessToken, getAccessToken, appSignOut]);
+  }, [state.isAuthenticated, refreshAccessToken, getAccessToken, appSignOut]);
 
-  /**Inside AppAuthProvider, once the SDK flags the user as authenticated 
-   * (state.isAuthenticated), the setupAuthenticatedUser function is triggered.
-   *  It queries the Asgardeo SDK directly via asynchronous methods */
   const setupAuthenticatedUser = useCallback(async () => {
-    const [userInfo, idToken, decodedIdToken] = await Promise.all([
+    const [userInfo, accessToken] = await Promise.all([
       getBasicUserInfo(),
-      getIDToken(),
-      getDecodedIDToken(),
+      getAccessToken(),
     ]);
-  
-    dispatch(setUserAuthData({ userInfo, decodedIdToken }));
 
-    new APIService(idToken, refreshToken); // stores the id token
+    dispatch(setUserAuthData({ userInfo }));
+
+    new APIService(accessToken, refreshToken); 
 
     const privilegesResp = await APIService.getInstance().get(AppConfig.serviceUrls.userPrivileges);
     const { privileges } = privilegesResp.data as { privileges: number[] };
@@ -159,7 +153,7 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
 
     await dispatch(loadPrivileges()).unwrap();
     await dispatch(fetchAppConfig()).unwrap();
-  }, [getBasicUserInfo, getIDToken, getDecodedIDToken, state.email, dispatch, refreshToken]);
+  }, [getBasicUserInfo, getAccessToken, state.email, dispatch, refreshToken]);
 
   const appSignIn = useCallback(async () => {
     if (signInFailedRef.current || signInAttemptsRef.current >= MAX_SIGN_IN_ATTEMPTS) {
