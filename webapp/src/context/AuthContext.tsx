@@ -24,8 +24,9 @@ import BackgroundLoader from "@component/common/BackgroundLoader";
 import SessionWarningDialog from "@component/common/SessionWarningDialog";
 import { redirectUrl } from "@config/constant";
 import { loadPrivileges, setAuthError, setUserAuthData } from "@slices/authSlice/auth";
+import { AppConfig } from "@config/config";
+import { fetchAppConfig } from "@slices/configSlice/config";
 import { useAppDispatch } from "@slices/store";
-
 import { setUserInfoFromClaims } from "@slices/userSlice/user";
 import { APIService } from "@utils/apiService";
 
@@ -129,57 +130,36 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
     }
   }, [state.isAuthenticated, getIDToken, refreshAccessToken, getAccessToken, appSignOut]);
 
+  /**Inside AppAuthProvider, once the SDK flags the user as authenticated 
+   * (state.isAuthenticated), the setupAuthenticatedUser function is triggered.
+   *  It queries the Asgardeo SDK directly via asynchronous methods */
   const setupAuthenticatedUser = useCallback(async () => {
-    const [userInfo, idToken, decodedIdToken, accessToken] = await Promise.all([
+    const [userInfo, idToken, decodedIdToken] = await Promise.all([
       getBasicUserInfo(),
       getIDToken(),
       getDecodedIDToken(),
-      getAccessToken(),
     ]);
+  
+    dispatch(setUserAuthData({ userInfo, decodedIdToken }));
+
+    new APIService(idToken, refreshToken); // stores the id token
+
+    const privilegesResp = await APIService.getInstance().get(AppConfig.serviceUrls.userPrivileges);
+    const { privileges } = privilegesResp.data as { privileges: number[] };
 
     dispatch(
-      setUserAuthData({
-        userInfo: userInfo,
-        decodedIdToken: decodedIdToken,
+      setUserInfoFromClaims({
+        workEmail: userInfo.email || state.email || "",
+        firstName: userInfo.givenName || "",
+        lastName: userInfo.familyName || "",
+        employeeThumbnail: userInfo.picture || null,
+        privileges,
       }),
     );
 
-    new APIService(idToken, refreshToken);
-
-    const tokenPayload = JSON.parse(atob(accessToken.split(".")[1])) as { groups?: string[] };
-const groups = tokenPayload.groups ?? decodedIdToken.groups ?? [];
-    const privileges: number[] = [];
-    if (groups.includes("wso2-interns")) privileges.push(987);
-    if (groups.includes("wso2-everyone")) privileges.push(762);
-
-// ==========================================
-    // DEBUG CONSOLE LOG: Check extracted properties
-    // ==========================================
-    // console.log("%c--- ASGARDEO FRONTEND USER INFO OBJECT ---", "color: #00ff00; font-weight: bold;");
-    // console.log("Full Object Data:", userInfo);
-    // console.log("Extracted given_name (First Name):", userInfo?.givenName);
-    // console.log("Extracted family_name (Last Name):", userInfo?.familyName);
-    // console.log("Extracted profile / picture (Thumbnail) field:", userInfo?.picture || userInfo?.profile);
-    // console.log("==========================================");
-
-
-    if (userInfo) {
-      dispatch(
-
-        setUserInfoFromClaims({
-          //we simply extract those claims from the token and instantly pushing
-          // to the redux store for further usage in the app
-          workEmail: userInfo.email || state.email || "",
-          firstName: userInfo.givenName || "",
-          lastName: userInfo.familyName || "",
-          employeeThumbnail: userInfo.picture || "",
-          privileges,
-        })
-      );
-    }
-
-    dispatch(loadPrivileges());
-  }, [getBasicUserInfo, getIDToken, getDecodedIDToken, getAccessToken, state.email, dispatch, refreshToken]);
+    await dispatch(loadPrivileges()).unwrap();
+    await dispatch(fetchAppConfig()).unwrap();
+  }, [getBasicUserInfo, getIDToken, getDecodedIDToken, state.email, dispatch, refreshToken]);
 
   const appSignIn = useCallback(async () => {
     if (signInFailedRef.current || signInAttemptsRef.current >= MAX_SIGN_IN_ATTEMPTS) {
@@ -347,3 +327,4 @@ const groups = tokenPayload.groups ?? decodedIdToken.groups ?? [];
 export const useAppAuthContext = (): AuthContextType => useContext(AuthContext);
 
 export default AppAuthProvider;
+
