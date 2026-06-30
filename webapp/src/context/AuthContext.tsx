@@ -152,7 +152,7 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
         workEmail: userInfo.email || state.email || "",
         firstName: userInfo.givenName || "",
         lastName: userInfo.familyName || "",
-        employeeThumbnail: userInfo.picture || null,
+        employeeThumbnail: userInfo.profile || null,
         privileges,
       }),
     );
