@@ -34,22 +34,20 @@ interface RequestConfigWithLoader extends AxiosRequestConfig {
 export class APIService {
   private static _instance: AxiosInstance;
   private static _idToken: string;
-  private static _accessToken: string;
   private static _cancelTokenSource = axios.CancelToken.source();
   private static _cancelTokenMap: Map<string, CancelTokenSource> = new Map();
-  private static callback: () => Promise<{ idToken: string; accessToken: string }>;
+  private static callback: () => Promise<{ accessToken: string }>;
 
   private static _isRefreshing = false;
-  private static _refreshPromise: Promise<{ idToken: string; accessToken: string }> | null = null;
+  private static _refreshPromise: Promise<{ accessToken: string }> | null = null;
 
-  constructor(idToken: string, accessToken: string, callback: () => Promise<{ idToken: string; accessToken: string }>) {
+  constructor(idToken: string, callback: () => Promise<{ accessToken: string }>) {
     APIService._instance = axios.create({
       baseURL: ServiceBaseUrl,
     });
     rax.attach(APIService._instance);
 
     APIService._idToken = idToken;
-    APIService._accessToken = accessToken;
     APIService.callback = callback;
 
     APIService.updateRequestInterceptor();
@@ -66,7 +64,7 @@ export class APIService {
           APIService._isRefreshing = true;
           APIService._refreshPromise = APIService.callback()
             .then((res) => {
-              APIService.updateTokens(res.idToken, res.accessToken);
+              APIService.updateTokens(res.accessToken);
               APIService._instance.interceptors.request.clear();
               APIService.updateRequestInterceptor();
               return res;
@@ -132,9 +130,8 @@ export class APIService {
     return APIService._instance.delete<T>(url, config);
   }
 
-  private static updateTokens(idToken: string, accessToken: string) {
+  private static updateTokens(idToken: string) {
     APIService._idToken = idToken;
-    APIService._accessToken = accessToken;
   }
 
   private static updateRequestInterceptor() {
@@ -149,22 +146,16 @@ export class APIService {
           config.headers = {} as AxiosRequestHeaders;
         }
 
+        // Standardized Header Key: Removed leading space, fixed string template typo
+        const headerKey = "x-jwt-assertion"; 
+        const headerValue = APIService._idToken;
+
         if (
           typeof (config.headers as { set?: (k: string, v: string) => void }).set === "function"
         ) {
-          (config.headers as { set: (k: string, v: string) => void }).set(
-            "x-jwt-assertion",
-            `${APIService._idToken}`
-          );
-          (config.headers as { set: (k: string, v: string) => void }).set(
-            "x-access-token",
-            `${APIService._accessToken}`
-          );
+          (config.headers as { set: (k: string, v: string) => void }).set(headerKey, headerValue);
         } else {
-          (config.headers as Record<string, string>)["x-jwt-assertion"] =
-            `${APIService._idToken}`;
-          (config.headers as Record<string, string>)["x-access-token"] =
-            `${APIService._accessToken}`;
+          (config.headers as Record<string, string>)[headerKey] = headerValue;
         }
 
         const endpointKey = [
@@ -223,3 +214,4 @@ export class APIService {
 }
 
 export const apiService = APIService;
+
