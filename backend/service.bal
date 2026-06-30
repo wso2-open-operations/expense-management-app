@@ -252,47 +252,27 @@ service http:InterceptableService / on new http:Listener(9090) {
         return buildEffectiveAppConfig();
     }
 
-    // NOTE: user-info endpoint removed — frontend now reads workEmail, firstName, lastName,
-    // and employeeThumbnail directly from the Asgardeo JWT via the SDK (no backend call needed).
-    // resource function get user\-info(http:RequestContext ctx) returns UserInfoResponse|http:InternalServerError {
-    //     authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
-    //     if userInfo is error {
-    //         return <http:InternalServerError>{
-    //             body: {
-    //                 message: "User information header not found!"
-    //             }
-    //         };
-    //     }
-    //
-    //     if cache.hasKey(userInfo.email) {
-    //         UserInfoResponse|error cachedUserInfo = cache.get(userInfo.email).ensureType();
-    //         if cachedUserInfo is UserInfoResponse {
-    //             return cachedUserInfo;
-    //         }
-    //     }
-    //
-    //     int[] privileges = [];
-    //     if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], userInfo.groups) {
-    //         privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
-    //     }
-    //     if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], userInfo.groups) {
-    //         privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
-    //     }
-    //
-    //     UserInfoResponse userInfoResponse = {
-    //         workEmail: userInfo.email,
-    //         firstName: userInfo.givenName,
-    //         lastName: userInfo.familyName,
-    //         employeeThumbnail: userInfo.thumbnail,
-    //         privileges
-    //     };
-    //
-    //     error? cacheError = cache.put(userInfo.email, userInfoResponse);
-    //     if cacheError is error {
-    //         log:printError("An error occurred while writing user info to the cache", cacheError);
-    //     }
-    //     return userInfoResponse;
-    // }
+    # Get the privileges of the authenticated user derived from their Asgardeo groups.
+    #
+    # + ctx - Request context containing authenticated user information
+    # + return - Array of privilege codes if successful, otherwise an HTTP error response
+    isolated resource function get user\-privileges(http:RequestContext ctx)
+        returns record {|int[] privileges;|}|http:InternalServerError {
+        authorization:UserInfo|http:BadRequest authResult = extractUserInfo(ctx);
+        if authResult is http:BadRequest {
+            return <http:InternalServerError>{body: {message: "User information header not found!"}};
+        }
+
+        int[] privileges = [];
+        if authorization:checkPermissions([authorization:authorizedRoles.employeeRole], authResult.groups) {
+            privileges.push(authorization:EMPLOYEE_ROLE_PRIVILEGE);
+        }
+        if authorization:checkPermissions([authorization:authorizedRoles.financeAdminRole], authResult.groups) {
+            privileges.push(authorization:FINANCE_ADMIN_PRIVILEGE);
+        }
+
+        return {privileges};
+    }
 
     # Get the OPD claim summary for the requested reporting period.
     #
@@ -1372,3 +1352,4 @@ service http:InterceptableService / on new http:Listener(9090) {
         };
     }
 }
+
