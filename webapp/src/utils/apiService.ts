@@ -146,9 +146,8 @@ export class APIService {
           config.headers = {} as AxiosRequestHeaders;
         }
 
-        // Standardized Header Key: Removed leading space, fixed string template typo
-        const headerKey = "x-jwt-assertion"; 
-        const headerValue = APIService._idToken;
+        const headerKey = "Authorization";
+        const headerValue = `Bearer ${APIService._idToken}`;
 
         if (
           typeof (config.headers as { set?: (k: string, v: string) => void }).set === "function"
