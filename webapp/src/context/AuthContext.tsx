@@ -78,7 +78,6 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
     signIn,
     signOut,
     getBasicUserInfo,
-    getDecodedIDToken,
     refreshAccessToken,
     getAccessToken,
     state,
@@ -130,13 +129,12 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
   }, [state.isAuthenticated, refreshAccessToken, getAccessToken, appSignOut]);
 
   const setupAuthenticatedUser = useCallback(async () => {
-    const [userInfo, accessToken, decodedIdToken] = await Promise.all([
+    const [userInfo, accessToken] = await Promise.all([
       getBasicUserInfo(),
       getAccessToken(),
-      getDecodedIDToken(),
     ]);
 
-    dispatch(setUserAuthData({ userInfo, decodedIdToken }));
+    dispatch(setUserAuthData({ userInfo }));
 
     new APIService(accessToken, refreshToken); 
 
@@ -155,7 +153,7 @@ const AppAuthProvider = (props: { children: React.ReactNode }) => {
 
     await dispatch(loadPrivileges()).unwrap();
     await dispatch(fetchAppConfig()).unwrap();
-  }, [getBasicUserInfo, getAccessToken, getDecodedIDToken, state.email, dispatch, refreshToken]);
+  }, [getBasicUserInfo, getAccessToken, state.email, dispatch, refreshToken]);
 
   const appSignIn = useCallback(async () => {
     if (signInFailedRef.current || signInAttemptsRef.current >= MAX_SIGN_IN_ATTEMPTS) {
