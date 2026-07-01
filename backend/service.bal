@@ -15,8 +15,7 @@
 // under the License.
 import expense_management.authorization;
 import expense_management.database;
-
-
+import expense_management.entity;
 
 import ballerina/cache;
 import ballerina/http;
@@ -57,7 +56,8 @@ isolated function normalizeBusinessUnit(string? businessUnit) returns string? {
 }
 
 isolated function fetchNameMap(string[] emails) returns map<string> {
-    return {};
+    map<string>|error hrNames = entity:fetchEmployeeNameMap(emails);
+    return hrNames is map<string> ? hrNames : {};
 }
 
 isolated function validateDateParams(int? year, int? month, int monthRange) returns http:BadRequest? {
@@ -478,8 +478,14 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
+        string empName = deriveDisplayName(email);
+        entity:Employee|error empEmployee = entity:fetchEmployeesBasicInfo(email);
+        if empEmployee is entity:Employee {
+            empName = empEmployee.firstName + " " + empEmployee.lastName;
+        }
+
         return {
-            name: deriveDisplayName(email),
+            name: empName,
             email: email,
             totalAmount: grandTotal,
             claimCount: totalClaims,
@@ -639,8 +645,14 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
+        string empName = deriveDisplayName(callerEmail);
+        entity:Employee|error empEmployee = entity:fetchEmployeesBasicInfo(callerEmail);
+        if empEmployee is entity:Employee {
+            empName = empEmployee.firstName + " " + empEmployee.lastName;
+        }
+
         return {
-            name: deriveDisplayName(callerEmail),
+            name: empName,
             email: callerEmail,
             totalAmount: grandTotal,
             claimCount: totalClaims,
@@ -1258,8 +1270,14 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
+        string empName = deriveDisplayName(email);
+        entity:Employee|error empRecord = entity:fetchEmployeesBasicInfo(email);
+        if empRecord is entity:Employee {
+            empName = empRecord.firstName + " " + empRecord.lastName;
+        }
+
         return {
-            name: deriveDisplayName(email),
+            name: empName,
             email: email,
             totalAmount: grandTotal,
             txnCount: totalTxns,
