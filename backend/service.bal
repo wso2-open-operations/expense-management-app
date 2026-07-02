@@ -412,7 +412,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: customError}};
         }
 
-        string[] employeeEmails = from database:AllSpendingEmployeeRow row in rows select row.employeeEmail;
+        string[] employeeEmails = from database:AllSpendingEmployeeRow row in rows
+            select row.employeeEmail;
         map<string> nameMap = fetchNameMap(employeeEmails);
 
         return from database:AllSpendingEmployeeRow row in rows
@@ -478,15 +479,7 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
-       
-        string empName = deriveDisplayName(email);
-     if authResult.email == email {
-    if authResult.name is string {
-        empName = <string>authResult.name;
-    } else if authResult.given_name is string && authResult.family_name is string {
-        empName = string `${<string>authResult.given_name} ${<string>authResult.family_name}`;
-    }
-}
+        string empName = string `${authResult.firstName ?: ""} ${authResult.lastName ?: ""}`.trim();
 
         return {
             name: empName,
@@ -649,16 +642,8 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
-        
-        string empName = deriveDisplayName(callerEmail);
-    if authResult.email == callerEmail {
-    if authResult.name is string {
-        empName = <string>authResult.name;
-    } else if authResult.given_name is string && authResult.family_name is string {
-        empName = string `${<string>authResult.given_name} ${<string>authResult.family_name}`;
-    }
-}
-        
+        string empName = string `${authResult.firstName ?: ""} ${authResult.lastName ?: ""}`.trim();
+
         return {
             name: empName,
             email: callerEmail,
@@ -829,7 +814,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: customError}};
         }
 
-        string[] leadEmails = from database:LeadFrequencyRow row in rows select row.leadEmail;
+        string[] leadEmails = from database:LeadFrequencyRow row in rows
+            select row.leadEmail;
         map<string> nameMap = fetchNameMap(leadEmails);
 
         LeadFrequencyItemResponse[] result = [];
@@ -1060,7 +1046,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: "Failed to fetch top cards."}};
         }
 
-        string[] emails = from database:CCTopCardRow row in rows select row.holderName;
+        string[] emails = from database:CCTopCardRow row in rows
+            select row.holderName;
         map<string> nameMap = fetchNameMap(emails);
 
         return from database:CCTopCardRow row in rows
@@ -1106,7 +1093,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: "Failed to fetch card list."}};
         }
 
-        string[] emails = from database:CCCardRow row in rows select row.holderName;
+        string[] emails = from database:CCCardRow row in rows
+            select row.holderName;
         map<string> nameMap = fetchNameMap(emails);
 
         return from database:CCCardRow row in rows
@@ -1162,7 +1150,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: "Failed to fetch category employees."}};
         }
 
-        string[] emails = from database:CCEmployeeSpendingRow row in rows select row.employeeEmail;
+        string[] emails = from database:CCEmployeeSpendingRow row in rows
+            select row.employeeEmail;
         map<string> nameMap = fetchNameMap(emails);
 
         return from database:CCEmployeeSpendingRow row in rows
@@ -1210,7 +1199,8 @@ service http:InterceptableService / on new http:Listener(9090) {
             return <HttpInternalServerError>{body: {message: "Failed to fetch CC employee spending."}};
         }
 
-        string[] emails = from database:CCEmployeeSpendingRow row in rows select row.employeeEmail;
+        string[] emails = from database:CCEmployeeSpendingRow row in rows
+            select row.employeeEmail;
         map<string> nameMap = fetchNameMap(emails);
 
         return from database:CCEmployeeSpendingRow row in rows
@@ -1278,15 +1268,7 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
-       
-        string empName = deriveDisplayName(email);
-   if authResult.email == email {
-    if authResult.name is string {
-        empName = <string>authResult.name;
-    } else if authResult.given_name is string && authResult.family_name is string {
-        empName = string `${<string>authResult.given_name} ${<string>authResult.family_name}`;
-    }
-}
+        string empName = string `${authResult.firstName ?: ""} ${authResult.lastName ?: ""}`.trim();
 
         return {
             name: empName,
@@ -1364,5 +1346,4 @@ service http:InterceptableService / on new http:Listener(9090) {
         };
     }
 }
-
 
