@@ -15,8 +15,7 @@
 // under the License.
 import ballerina/http;
 
-configurable string hrEntityBaseUrl =?;
-
+configurable string hrEntityBaseUrl = ?;
 configurable Oauth2Config? oauthConfig = ();
 
 isolated function buildHrClientConfig(Oauth2Config? cfg) returns http:ClientConfiguration {

@@ -44,9 +44,6 @@ public isolated function fetchEmployeesBasicInfo(string workEmail) returns Emplo
     return employee;
 }
 
-
-
-
 # Fetch a map of lowercase work email → full name for the given list of emails.
 #
 # + emails - Work email addresses to resolve
@@ -65,7 +62,4 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
     }
     return nameMap;
 }
-
-
-
 

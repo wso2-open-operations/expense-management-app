@@ -46,5 +46,3 @@ public type AppRoles record {|
     string financeAdminRole;
 |};
 
-
-
