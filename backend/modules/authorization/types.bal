@@ -20,8 +20,6 @@ public type CustomJwtPayload record {
     string email;
     # Group or role names assigned to the authenticated user
     string|string[] groups = [];
-    # Full display name of the authenticated user
-    string? name = ();
     # Given (first) name of the authenticated user
     string? given_name = ();
     # Family (last) name of the authenticated user
@@ -34,12 +32,10 @@ public type UserInfo record {|
     string email;
     # Normalized group names assigned to the authenticated user
     string[] groups = [];
-    # Full display name of the authenticated user, if provided by the identity provider
-    string? name = ();
-    # Given (first) name of the authenticated user, if provided by the identity provider
-    string? given_name = ();
-    # Family (last) name of the authenticated user, if provided by the identity provider
-    string? family_name = ();
+    # First name of the user
+    string? firstName = ();
+    # Last name of the user
+    string? lastName = ();
 |};
 
 # Application-specific role names used for authorization checks.
@@ -49,5 +45,6 @@ public type AppRoles record {|
     # Role granted to finance administrators
     string financeAdminRole;
 |};
+
 
 
