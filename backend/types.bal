@@ -15,7 +15,6 @@
 // under the License.
 import ballerina/http;
 
-
 # Application configuration returned to the frontend
 public type AppConfig record {|
     # Annual OPD claim limit per employee
