@@ -479,10 +479,6 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
 
         string empName = deriveDisplayName(email);
-        entity:Employee|error empEmployee = entity:fetchEmployeesBasicInfo(email);
-        if empEmployee is entity:Employee {
-            empName = empEmployee.firstName + " " + empEmployee.lastName;
-        }
 
         return {
             name: empName,
@@ -646,11 +642,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
 
         string empName = deriveDisplayName(callerEmail);
-        entity:Employee|error empEmployee = entity:fetchEmployeesBasicInfo(callerEmail);
-        if empEmployee is entity:Employee {
-            empName = empEmployee.firstName + " " + empEmployee.lastName;
-        }
-
+        
         return {
             name: empName,
             email: callerEmail,
@@ -1271,10 +1263,7 @@ service http:InterceptableService / on new http:Listener(9090) {
             };
 
         string empName = deriveDisplayName(email);
-        entity:Employee|error empRecord = entity:fetchEmployeesBasicInfo(email);
-        if empRecord is entity:Employee {
-            empName = empRecord.firstName + " " + empRecord.lastName;
-        }
+        
 
         return {
             name: empName,
