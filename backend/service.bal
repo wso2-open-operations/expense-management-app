@@ -478,7 +478,18 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
+       
+        map<anydata> dynamicClaims = <map<anydata>>authResult;
+        anydata nameClaim = dynamicClaims["name"];
+        
         string empName = deriveDisplayName(email);
+        if (authResult.email.toLowerAscii() == email.toLowerAscii()) {
+            if nameClaim is string {
+                empName = nameClaim;
+            } else if dynamicClaims["given_name"] is string && dynamicClaims["family_name"] is string {
+                empName = <string>dynamicClaims["given_name"] + " " + <string>dynamicClaims["family_name"];
+            }
+        }
 
         return {
             name: empName,
@@ -641,7 +652,16 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
+        
+        map<anydata> dynamicClaims = <map<anydata>>authResult;
+        anydata nameClaim = dynamicClaims["name"];
+        
         string empName = deriveDisplayName(callerEmail);
+        if nameClaim is string {
+            empName = nameClaim;
+        } else if dynamicClaims["given_name"] is string && dynamicClaims["family_name"] is string {
+            empName = <string>dynamicClaims["given_name"] + " " + <string>dynamicClaims["family_name"];
+        }
         
         return {
             name: empName,
@@ -1140,7 +1160,7 @@ service http:InterceptableService / on new http:Listener(9090) {
 
         database:CCEmployeeSpendingRow[]|error rows = database:queryCCCategoryEmployees(
                 category, effectiveYear, effectiveMonth, monthRange
-        );
+                );
         if rows is error {
             log:printError("Failed to fetch CC category employees.", rows);
             return <HttpInternalServerError>{body: {message: "Failed to fetch category employees."}};
@@ -1262,8 +1282,18 @@ service http:InterceptableService / on new http:Listener(9090) {
                 percentage: grandTotal > 0.0d ? (row.total / grandTotal) * 100.0d : 0.0d
             };
 
-        string empName = deriveDisplayName(email);
+       
+        map<anydata> dynamicClaims = <map<anydata>>authResult;
+        anydata nameClaim = dynamicClaims["name"];
         
+        string empName = deriveDisplayName(email);
+        if (authResult.email.toLowerAscii() == email.toLowerAscii()) {
+            if nameClaim is string {
+                empName = nameClaim;
+            } else if dynamicClaims["given_name"] is string && dynamicClaims["family_name"] is string {
+                empName = <string>dynamicClaims["given_name"] + " " + <string>dynamicClaims["family_name"];
+            }
+        }
 
         return {
             name: empName,
@@ -1341,4 +1371,3 @@ service http:InterceptableService / on new http:Listener(9090) {
         };
     }
 }
-

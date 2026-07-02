@@ -14,6 +14,38 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/http;
+
+# Fetch basic employee details for the given work email from the HR entity service.
+#
+# + workEmail - Work email address of the employee to look up
+# + return - Employee details if the HR entity lookup succeeds, otherwise an error
+public isolated function fetchEmployeesBasicInfo(string workEmail) returns Employee|error {
+    json requestPayload = {"email": workEmail};
+
+    http:Request request = new;
+    request.setJsonPayload(requestPayload);
+
+    http:Response response = check hrClient->post("/employee-basic-search", request);
+
+    if response.statusCode == 404 {
+        return error(string `Employee not found for email: ${workEmail}`);
+    }
+    if response.statusCode < 200 || response.statusCode >= 300 {
+        string responseBody = check response.getTextPayload();
+        return error(string `HR service request failed with status ${response.statusCode}: ${responseBody}`);
+    }
+
+    json payload = check response.getJsonPayload();
+    Employee|error employee = payload.cloneWithType();
+    if employee is error {
+        return employee;
+    }
+    return employee;
+}
+
+
+
 
 # Fetch a map of lowercase work email → full name for the given list of emails.
 #
@@ -26,9 +58,14 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
         if lower == "" || nameMap.hasKey(lower) {
             continue;
         }
+        Employee|error emp = fetchEmployeesBasicInfo(email);
+        if emp is Employee {
+            nameMap[lower] = emp.firstName + " " + emp.lastName;
+        }
     }
     return nameMap;
 }
+
 
 
 
