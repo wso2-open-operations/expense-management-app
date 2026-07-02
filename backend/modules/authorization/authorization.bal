@@ -61,7 +61,10 @@ public isolated service class JwtInterceptor {
         string|string[] groups = userInfo.groups;
         UserInfo userInfoHeader = {
             email: userInfo.email,
-            groups: groups is string[] ? groups : [groups]
+            groups: groups is string[] ? groups : [groups],
+            name: userInfo.name,
+            given_name: userInfo.given_name,
+            family_name: userInfo.family_name
         };
         foreach anydata role in authorizedRoles.toArray() {
             if userInfoHeader.groups.some(r => r === role) {
