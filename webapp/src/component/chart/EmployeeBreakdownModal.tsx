@@ -16,7 +16,7 @@
 import { Box, CircularProgress, Skeleton, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
 import { ChevronDown, ChevronRight, Download, TrendingDown, TrendingUp, X } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   type EmployeeCategoryTransactionItem,
@@ -28,6 +28,17 @@ import {
 import { apiService } from "@utils/apiService";
 import { type CurrencyCode, CURRENCIES, formatWithSymbol } from "@utils/currency";
 import { exportEmployeeBreakdown } from "@utils/exportExcel";
+
+function formatMonthLabel(ym: string): string {
+  const [y, m] = ym.slice(0, 7).split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function getDefaultCompDate(): string {
+  const now = new Date();
+  const pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, "0")}-01`;
+}
 
 const SEGMENT_COLORS = [
   "#00B4D8",
@@ -338,8 +349,6 @@ function CategoryRow({
   );
 }
 
-type CompareMode = "prevMonth" | "prevYear";
-
 interface PeriodComparisonProps {
   currentBreakdown: EmployeeSpendingBreakdownResponse | null;
   prevBreakdown: EmployeeSpendingBreakdownResponse | null;
@@ -347,7 +356,7 @@ interface PeriodComparisonProps {
   loadingPrev: boolean;
   fmtSym: (v: number) => string;
   dateRange: string;
-  compareMode: CompareMode;
+  compLabel: string;
 }
 
 function PeriodComparison({
@@ -357,10 +366,10 @@ function PeriodComparison({
   loadingPrev,
   fmtSym,
   dateRange,
-  compareMode,
+  compLabel,
 }: PeriodComparisonProps) {
-  const prevLabel = compareMode === "prevMonth" ? "Last Month" : "Last Year";
-  const prevTitle = compareMode === "prevMonth" ? "Previous Month" : "Previous Year";
+  const prevLabel = compLabel;
+  const prevTitle = "Comparison Range";
 
   const curTotal = currentBreakdown?.totalAmount ?? 0;
   const prevTotal = prevBreakdown?.totalAmount ?? 0;
@@ -458,7 +467,7 @@ function PeriodComparison({
               letterSpacing: 0.5,
             }}
           >
-            {compareMode === "prevMonth" ? "vs last month" : "vs last year"}
+            vs selected range
           </Typography>
         </Box>
 
@@ -517,7 +526,8 @@ export default function EmployeeBreakdownModal({
 }: EmployeeBreakdownModalProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>("All");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [compareMode, setCompareMode] = useState<CompareMode>("prevMonth");
+  const [compFromDate, setCompFromDate] = useState(getDefaultCompDate);
+  const [compToDate, setCompToDate] = useState(getDefaultCompDate);
   const [exportLoading, setExportLoading] = useState(false);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
@@ -528,7 +538,10 @@ export default function EmployeeBreakdownModal({
     statusTab === "All" ? "" : statusTab,
   );
 
-  const compDateRange = compareMode === "prevMonth" ? "Last Month" : "Last Year";
+  const compDateRange = `custom:${compFromDate}:${compToDate}`;
+  const compLabel = compFromDate === compToDate
+    ? formatMonthLabel(compFromDate)
+    : `${formatMonthLabel(compFromDate)} – ${formatMonthLabel(compToDate)}`;
   const { breakdown: compBreakdown, loading: loadingComp } = useEmployeeBreakdown(
     open ? employeeEmail : null,
     compDateRange,
@@ -539,7 +552,8 @@ export default function EmployeeBreakdownModal({
     if (open) {
       setStatusTab("All");
       setExpandedCategory(null);
-      setCompareMode("prevMonth");
+      setCompFromDate(getDefaultCompDate());
+      setCompToDate(getDefaultCompDate());
     }
   }, [open, employeeEmail]);
 
@@ -597,7 +611,7 @@ export default function EmployeeBreakdownModal({
         currency: CURRENCIES[currency].code,
         totalAmount: breakdown.totalAmount,
         claimCount: breakdown.claimCount,
-        compareMode,
+        compLabel,
         prevTotalAmount: compBreakdown?.totalAmount ?? 0,
         prevClaimCount: compBreakdown?.claimCount ?? 0,
         categories: breakdown.categories.map((cat) => {
@@ -771,32 +785,62 @@ export default function EmployeeBreakdownModal({
               loadingPrev={loadingComp}
               fmtSym={fmtSym}
               dateRange={dateRange}
-              compareMode={compareMode}
+              compLabel={compLabel}
             />
 
-            <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
-              {(["prevMonth", "prevYear"] as const).map((mode) => (
-                <Box
-                  key={mode}
-                  onClick={() => setCompareMode(mode)}
-                  sx={{
-                    cursor: "pointer",
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 1,
-                    border: "1px solid",
-                    borderColor: compareMode === mode ? "primary.main" : "divider",
-                    bgcolor: compareMode === mode ? "primary.main" : "transparent",
-                    color: compareMode === mode ? "#fff" : "text.secondary",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    transition: "all 0.2s",
-                    "&:hover": { borderColor: "primary.main" },
-                  }}
-                >
-                  {mode === "prevMonth" ? "Prev Month" : "Prev Year"}
+            <Box sx={{ mb: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}>
+              <Typography sx={{ fontSize: 10, fontWeight: 800, color: "text.disabled", textTransform: "uppercase", letterSpacing: 1, mb: 1 }}>
+                Date Range
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>From</Typography>
+                  <Box
+                    component="input"
+                    type="date"
+                    value={compFromDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompFromDate(e.target.value)}
+                    sx={{
+                      bgcolor: "background.default",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1.5,
+                      px: 1.5,
+                      py: 0.75,
+                      color: "text.primary",
+                      fontSize: 13,
+                      outline: "none",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      "&:focus": { borderColor: "primary.main" },
+                    }}
+                  />
                 </Box>
-              ))}
+                <Typography sx={{ color: "text.disabled", mt: 2 }}>→</Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>To</Typography>
+                  <Box
+                    component="input"
+                    type="date"
+                    value={compToDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompToDate(e.target.value)}
+                    sx={{
+                      bgcolor: "background.default",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1.5,
+                      px: 1.5,
+                      py: 0.75,
+                      color: "text.primary",
+                      fontSize: 13,
+                      outline: "none",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      "&:focus": { borderColor: "primary.main" },
+                    }}
+                  />
+                </Box>
+              </Box>
             </Box>
 
             {!breakdown || breakdown.categories.length === 0 ? (
@@ -839,7 +883,7 @@ export default function EmployeeBreakdownModal({
                           letterSpacing: 0.5,
                         }}
                       >
-                        {compareMode === "prevMonth" ? "Prev Month" : "Prev Year"}
+                        Date Range
                       </Typography>
                     </Box>
                     <Typography
@@ -904,3 +948,5 @@ export default function EmployeeBreakdownModal({
     </Dialog>
   );
 }
+
+
