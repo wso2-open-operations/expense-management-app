@@ -71,7 +71,7 @@ export interface EmployeeBreakdownExportParams {
   currency: string;
   totalAmount: number;
   claimCount: number;
-  compareMode: "prevMonth" | "prevYear";
+  compLabel: string;
   prevTotalAmount: number;
   prevClaimCount: number;
   categories: Array<{
@@ -87,7 +87,7 @@ export interface EmployeeBreakdownExportParams {
 
 export function exportEmployeeBreakdown(p: EmployeeBreakdownExportParams): void {
   const wb = XLSX.utils.book_new();
-  const compLabel = p.compareMode === "prevMonth" ? "Last Month" : "Last Year";
+  const compLabel = p.compLabel;
 
   addSheet(wb, "Summary", [
     ["Field", "Value"],
@@ -335,7 +335,7 @@ export interface CCEmployeeBreakdownExportParams {
   email: string;
   dateRange: string;
   currency: string;
-  compareMode: "prevMonth" | "prevYear";
+  compLabel: string;
   totalAmount: number;
   txnCount: number;
   prevTotalAmount: number;
@@ -352,7 +352,7 @@ export interface CCEmployeeBreakdownExportParams {
 
 export function exportCCEmployeeBreakdown(p: CCEmployeeBreakdownExportParams): void {
   const wb = XLSX.utils.book_new();
-  const compLabel = p.compareMode === "prevMonth" ? "Last Month" : "Last Year";
+  const compLabel = p.compLabel;
 
   addSheet(wb, "Summary", [
     ["Field", "Value"],
@@ -459,3 +459,7 @@ export function exportCCCards(p: CCCardsExportParams): void {
   const date = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `cc-cards-report-${safeFileName(p.statusFilter)}-${date}.xlsx`);
 }
+
+
+
+
