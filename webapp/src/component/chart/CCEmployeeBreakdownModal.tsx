@@ -690,6 +690,7 @@ export default function CCEmployeeBreakdownModal({
                     type="date"
                     value={compFromDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompFromDate(e.target.value)}
+                    max={compToDate}
                     sx={{
                       bgcolor: "background.default",
                       border: "1px solid",
@@ -715,6 +716,7 @@ export default function CCEmployeeBreakdownModal({
                     type="date"
                     value={compToDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompToDate(e.target.value)}
+                    min={compFromDate}
                     sx={{
                       bgcolor: "background.default",
                       border: "1px solid",
