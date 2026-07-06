@@ -16,7 +16,7 @@
 import { Box, CircularProgress, Skeleton, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
 import { Download, ChevronDown, ChevronRight, TrendingDown, TrendingUp, X } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   type CCEmployeeBreakdownResponse,
@@ -40,6 +40,17 @@ const SEGMENT_COLORS = [
   "#90EE90",
   "#DA70D6",
 ];
+
+function formatMonthLabel(ym: string): string {
+  const [y, m] = ym.slice(0, 7).split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function getDefaultCompDate(): string {
+  const now = new Date();
+  const pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, "0")}-01`;
+}
 
 interface CCSubCategoryPanelProps {
   email: string;
@@ -315,7 +326,7 @@ function CCCategoryRow({
   );
 }
 
-type CompareMode = "prevMonth" | "prevYear";
+
 
 interface CCPeriodComparisonProps {
   currentBreakdown: CCEmployeeBreakdownResponse | null;
@@ -323,7 +334,8 @@ interface CCPeriodComparisonProps {
   loadingCurrent: boolean;
   loadingPrev: boolean;
   fmtSym: (v: number) => string;
-  compareMode: CompareMode;
+  compLabel: string; //comparison range
+  curLabel: string;
 }
 
 function CCPeriodComparison({
@@ -332,12 +344,13 @@ function CCPeriodComparison({
   loadingCurrent,
   loadingPrev,
   fmtSym,
-  compareMode,
+  compLabel,
+  curLabel,
 }: CCPeriodComparisonProps) {
-  const prevLabel = compareMode === "prevMonth" ? "Last Month" : "Last Year";
-  const prevTitle = compareMode === "prevMonth" ? "Previous Month" : "Previous Year";
-  const curLabel = compareMode === "prevMonth" ? "This Month" : "This Year";
-  const curTitle = compareMode === "prevMonth" ? "Current Month" : "Current Year";
+  const prevLabel = compLabel;
+  const prevTitle = "Comparison Range";
+  const curTitle = "Current Period";
+
 
   const curTotal = currentBreakdown?.totalAmount ?? 0;
   const prevTotal = prevBreakdown?.totalAmount ?? 0;
@@ -430,7 +443,7 @@ function CCPeriodComparison({
               letterSpacing: 0.5,
             }}
           >
-            {compareMode === "prevMonth" ? "vs last month" : "vs last year"}
+             vs selected range
           </Typography>
         </Box>
 
@@ -475,6 +488,7 @@ export interface CCEmployeeBreakdownModalProps {
   employeeEmail: string | null;
   employeeName: string;
   currency: CurrencyCode;
+  dateRange: string;
 }
 
 export default function CCEmployeeBreakdownModal({
@@ -483,14 +497,24 @@ export default function CCEmployeeBreakdownModal({
   employeeEmail,
   employeeName,
   currency,
+  dateRange,
 }: CCEmployeeBreakdownModalProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [compareMode, setCompareMode] = useState<CompareMode>("prevMonth");
+  const [compFromDate, setCompFromDate] = useState(getDefaultCompDate);
+  const [compToDate, setCompToDate] = useState(getDefaultCompDate);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
-  const currentDateRange = compareMode === "prevMonth" ? "This Month" : "This Year";
-  const compDateRange = compareMode === "prevMonth" ? "Last Month" : "Last Year";
+  const currentDateRange = dateRange;
+                         // month and a year not a specific day
+  const compDateRange = `custom:${compFromDate.slice(0, 7)}:${compToDate.slice(0, 7)}`;
+  const compLabel = compFromDate.slice(0, 7) === compToDate.slice(0, 7)
+    ? formatMonthLabel(compFromDate)
+    : `${formatMonthLabel(compFromDate)} – ${formatMonthLabel(compToDate)}`;
+  const curLabel = dateRange.startsWith("custom:")
+    ? (() => { const p = dateRange.slice(7).split(":"); return p.length === 2 ? `${formatMonthLabel(p[0])} – ${formatMonthLabel(p[1])}` : dateRange; })()
+    : dateRange;
+
 
   const { breakdown, loading } = useCCEmployeeBreakdown(open ? employeeEmail : null, currentDateRange);
   const { breakdown: compBreakdown, loading: loadingComp } = useCCEmployeeBreakdown(
@@ -501,13 +525,18 @@ export default function CCEmployeeBreakdownModal({
   useEffect(() => {
     if (open) {
       setExpandedCategory(null);
-      setCompareMode("prevMonth");
+      setCompFromDate(getDefaultCompDate());
+      setCompToDate(getDefaultCompDate());
     }
   }, [open, employeeEmail]);
 
+  const currentMap = new Map((breakdown?.categories ?? []).map((c) => [c.category, c]));
+  const compMap = new Map((compBreakdown?.categories ?? []).map((c) => [c.category, c]));
+  // Merge categories from both periods so all categories show regardless of which period has data
+  
+  const allCategories = [...new Set([...currentMap.keys(), ...compMap.keys()])];
   const maxCurrent = breakdown ? Math.max(...breakdown.categories.map((c) => c.total), 1) : 1;
   const maxComp = compBreakdown ? Math.max(...compBreakdown.categories.map((c) => c.total), 1) : 1;
-  const compMap = new Map((compBreakdown?.categories ?? []).map((c) => [c.category, c]));
 
   const handleDownload = () => {
     if (!breakdown || !employeeEmail) return;
@@ -516,7 +545,7 @@ export default function CCEmployeeBreakdownModal({
       email: employeeEmail,
       dateRange: currentDateRange,
       currency,
-      compareMode,
+      compLabel,
       totalAmount: breakdown.totalAmount,
       txnCount: breakdown.txnCount,
       prevTotalAmount: compBreakdown?.totalAmount ?? 0,
@@ -645,35 +674,68 @@ export default function CCEmployeeBreakdownModal({
               loadingCurrent={loading}
               loadingPrev={loadingComp}
               fmtSym={fmtSym}
-              compareMode={compareMode}
+              compLabel={compLabel}
+              curLabel={curLabel}
             />
 
-            <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
-              {(["prevMonth", "prevYear"] as const).map((mode) => (
-                <Box
-                  key={mode}
-                  onClick={() => setCompareMode(mode)}
-                  sx={{
-                    cursor: "pointer",
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 1,
-                    border: "1px solid",
-                    borderColor: compareMode === mode ? "primary.main" : "divider",
-                    bgcolor: compareMode === mode ? "primary.main" : "transparent",
-                    color: compareMode === mode ? "#fff" : "text.secondary",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    transition: "all 0.2s",
-                    "&:hover": { borderColor: "primary.main" },
-                  }}
-                >
-                  {mode === "prevMonth" ? "Prev Month" : "Prev Year"}
+            <Box sx={{ mb: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}>
+              <Typography sx={{ fontSize: 10, fontWeight: 800, color: "text.disabled", textTransform: "uppercase", letterSpacing: 1, mb: 1 }}>
+                Date Range
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>From</Typography>
+                  <Box
+                    component="input"
+                    type="date"
+                    value={compFromDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompFromDate(e.target.value)}
+                    sx={{
+                      bgcolor: "background.default",
+                      border: "1px solid",
+                      borderColor: "text.disabled",
+                      borderRadius: "20px",
+                      px: 1.5,
+                      py: 0.75,
+                      color: "text.primary",
+                      fontSize: 13,
+                      outline: "none",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      width: 140,
+                      "&:focus": { borderColor: "primary.main", outline: "none" },
+                    }}
+                  />
                 </Box>
-              ))}
+                <Typography sx={{ color: "text.disabled", mt: 2 }}>→</Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>To</Typography>
+                  <Box
+                    component="input"
+                    type="date"
+                    value={compToDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompToDate(e.target.value)}
+                    sx={{
+                      bgcolor: "background.default",
+                      border: "1px solid",
+                      borderColor: "text.disabled",
+                      borderRadius: "20px",
+                      px: 1.5,
+                      py: 0.75,
+                      color: "text.primary",
+                      fontSize: 13,
+                      outline: "none",
+                      colorScheme: "dark",
+                      cursor: "pointer",
+                      width: 140,
+                      "&:focus": { borderColor: "primary.main", outline: "none" },
+                    }}
+                  />
+                </Box>
+              </Box>
             </Box>
 
-            {!breakdown || breakdown.categories.length === 0 ? (
+            {allCategories.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 6 }}>
                 <Typography sx={{ color: "text.disabled", fontSize: 14 }}>
                   No card transaction data found for this period
@@ -713,7 +775,7 @@ export default function CCEmployeeBreakdownModal({
                           letterSpacing: 0.5,
                         }}
                       >
-                        {compareMode === "prevMonth" ? "Prev Month" : "Prev Year"}
+                        Date Range
                       </Typography>
                     </Box>
                     <Typography
@@ -741,15 +803,16 @@ export default function CCEmployeeBreakdownModal({
                     "&::-webkit-scrollbar-thumb": { bgcolor: "text.disabled", borderRadius: 2 },
                   }}
                 >
-                  {breakdown.categories.map((cat, i) => {
-                    const cmp = compMap.get(cat.category);
+                  {allCategories.map((catKey, i) => {
+                    const cur = currentMap.get(catKey);
+                    const cmp = compMap.get(catKey);
                     return (
                       <CCCategoryRow
-                        key={cat.category}
-                        category={cat.category}
-                        total={cat.total}
-                        txnCount={cat.txnCount}
-                        percentage={cat.percentage}
+                        key={catKey}
+                        category={catKey}
+                        total={cur?.total ?? 0}
+                        txnCount={cur?.txnCount ?? 0}
+                        percentage={cur?.percentage ?? 0}
                         color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
                         maxTotal={maxCurrent}
                         compTotal={cmp?.total ?? 0}
@@ -759,10 +822,10 @@ export default function CCEmployeeBreakdownModal({
                         dateRange={currentDateRange}
                         compDateRange={compDateRange}
                         fmtSym={fmtSym}
-                        isExpanded={expandedCategory === cat.category}
+                        isExpanded={expandedCategory === catKey}
                         onToggle={() =>
                           setExpandedCategory((prev) =>
-                            prev === cat.category ? null : cat.category,
+                            prev === catKey ? null : catKey,
                           )
                         }
                       />
@@ -777,3 +840,5 @@ export default function CCEmployeeBreakdownModal({
     </Dialog>
   );
 }
+
+
