@@ -83,8 +83,25 @@ export function resolveDateRangeParams(dateRange: string): DateRangeParams {
       };
     case "Last Year":
       return { year: String(currentYear - 1), month: "12", monthRange: "12" };
-    default:
+    default: {
+      // Handles the custom date range picked by the user in the breakdown modal.
+      // Format: "custom:YYYY-MM:YYYY-MM" (e.g. "custom:2025-07:2026-05")
+      // Converts the from/to months into the year, month, monthRange params the API expects.
+      //this is what makes the users custom date picker fetch real data.
+      if (dateRange.startsWith("custom:")) {
+        const parts = dateRange.slice(7).split(":");
+        if (parts.length === 2) {
+          const [fromYear, fromMonth] = parts[0].split("-").map(Number);
+          const [toYear, toMonth] = parts[1].split("-").map(Number);
+          if (fromYear && fromMonth && toYear && toMonth) {
+            const raw = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
+            const monthRange = Math.min(36, Math.max(1, raw)); // backend cap at 36 months
+            return { year: String(toYear), month: String(toMonth), monthRange: String(monthRange) };
+          }
+        }
+      }
       return { year: String(currentYear), month: String(currentMonth), monthRange: "0" };
+    }
   }
 }
 
@@ -290,3 +307,6 @@ export function useEmployeeCategoryTransactions(
 
   return { transactions, loading, error };
 }
+
+
+
