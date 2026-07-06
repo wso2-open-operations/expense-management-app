@@ -460,6 +460,3 @@ export function exportCCCards(p: CCCardsExportParams): void {
   XLSX.writeFile(wb, `cc-cards-report-${safeFileName(p.statusFilter)}-${date}.xlsx`);
 }
 
-
-
-
