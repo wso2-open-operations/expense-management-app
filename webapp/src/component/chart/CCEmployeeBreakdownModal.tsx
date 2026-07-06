@@ -14,9 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, CircularProgress, Skeleton, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
+import dayjs from "dayjs";
 import { Download, ChevronDown, ChevronRight, TrendingDown, TrendingUp, X } from "lucide-react";
 
-import React, { useEffect, useState } from "react";
+import DateRangePickerButton from "@component/common/DateRangePickerButton";
+
+import { useEffect, useState } from "react";
 
 import {
   type CCEmployeeBreakdownResponse,
@@ -678,63 +681,14 @@ export default function CCEmployeeBreakdownModal({
               curLabel={curLabel}
             />
 
-            <Box sx={{ mb: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2, bgcolor: "background.paper" }}>
-              <Typography sx={{ fontSize: 10, fontWeight: 800, color: "text.disabled", textTransform: "uppercase", letterSpacing: 1, mb: 1 }}>
-                Date Range
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
-                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>From</Typography>
-                  <Box
-                    component="input"
-                    type="date"
-                    value={compFromDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompFromDate(e.target.value)}
-                    max={compToDate}
-                    sx={{
-                      bgcolor: "background.default",
-                      border: "1px solid",
-                      borderColor: "text.disabled",
-                      borderRadius: "20px",
-                      px: 1.5,
-                      py: 0.75,
-                      color: "text.primary",
-                      fontSize: 13,
-                      outline: "none",
-                      colorScheme: "dark",
-                      cursor: "pointer",
-                      width: 140,
-                      "&:focus": { borderColor: "primary.main", outline: "none" },
-                    }}
-                  />
-                </Box>
-                <Typography sx={{ color: "text.disabled", mt: 2 }}>→</Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
-                  <Typography sx={{ fontSize: 10, color: "text.disabled" }}>To</Typography>
-                  <Box
-                    component="input"
-                    type="date"
-                    value={compToDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompToDate(e.target.value)}
-                    min={compFromDate}
-                    sx={{
-                      bgcolor: "background.default",
-                      border: "1px solid",
-                      borderColor: "text.disabled",
-                      borderRadius: "20px",
-                      px: 1.5,
-                      py: 0.75,
-                      color: "text.primary",
-                      fontSize: 13,
-                      outline: "none",
-                      colorScheme: "dark",
-                      cursor: "pointer",
-                      width: 140,
-                      "&:focus": { borderColor: "primary.main", outline: "none" },
-                    }}
-                  />
-                </Box>
-              </Box>
+            <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 1 }}>
+              <DateRangePickerButton
+                fromDate={dayjs(compFromDate)}
+                toDate={dayjs(compToDate)}
+                onFromChange={(d) => setCompFromDate(d.format("YYYY-MM-DD"))}
+                onToChange={(d) => setCompToDate(d.format("YYYY-MM-DD"))}
+                maxTo={dayjs()}
+              />
             </Box>
 
             {allCategories.length === 0 ? (
