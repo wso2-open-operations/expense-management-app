@@ -204,7 +204,12 @@ export default function CCEmployeeSpendingBreakdownPanel({
         employeeEmail={selectedEmployee?.email ?? null}
         employeeName={selectedEmployee?.name ?? ""}
         currency={currency}
+        dateRange={dateRange}
       />
     </>
   );
 }
+
+
+
+
