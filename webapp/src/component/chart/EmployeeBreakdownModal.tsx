@@ -811,6 +811,7 @@ const compLabel = standardFrom === standardTo
                     type="date"
                     value={compFromDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompFromDate(e.target.value)}
+                    aria-label="From date" 
                     sx={{
                       bgcolor: "background.default",
                       border: "1px solid",
@@ -835,6 +836,7 @@ const compLabel = standardFrom === standardTo
                     type="date"
                     value={compToDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompToDate(e.target.value)}
+                    aria-label="To date"
                     sx={{
                       bgcolor: "background.default",
                       border: "1px solid",
