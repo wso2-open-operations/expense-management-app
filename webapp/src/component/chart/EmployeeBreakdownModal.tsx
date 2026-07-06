@@ -538,10 +538,21 @@ export default function EmployeeBreakdownModal({
     statusTab === "All" ? "" : statusTab,
   );
 
-  const compDateRange = `custom:${compFromDate}:${compToDate}`;
-  const compLabel = compFromDate === compToDate
-    ? formatMonthLabel(compFromDate)
-    : `${formatMonthLabel(compFromDate)} – ${formatMonthLabel(compToDate)}`;
+  
+const currentYearMonth = new Date().toISOString().slice(0, 7);
+const safeFrom = compFromDate || currentYearMonth;
+const safeTo = compToDate || safeFrom;
+
+
+const standardFrom = safeFrom > safeTo ? safeTo : safeFrom;
+const standardTo = safeFrom > safeTo ? safeFrom : safeTo;
+
+
+const compDateRange = `custom:${standardFrom}:${standardTo}`;
+const compLabel = standardFrom === standardTo
+  ? formatMonthLabel(standardFrom)
+  : `${formatMonthLabel(standardFrom)} – ${formatMonthLabel(standardTo)}`;
+
   const { breakdown: compBreakdown, loading: loadingComp } = useEmployeeBreakdown(
     open ? employeeEmail : null,
     compDateRange,
