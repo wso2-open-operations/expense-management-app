@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Alert, Box, Button, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
+import dayjs from "dayjs";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -25,6 +26,7 @@ import DoughnutChart from "@component/chart/DoughnutChart";
 import EmployeeSpendingBreakdownPanel from "@component/chart/EmployeeSpendingBreakdownPanel";
 import LeadApprovalFrequencyPanel from "@component/chart/LeadApprovalFrequencyPanel";
 import CurrencySelector from "@component/common/CurrencySelector";
+import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import {
   DATE_RANGE_TO_PERIOD,
   DEFAULT_CURRENCY,
@@ -34,7 +36,11 @@ import {
   PERIOD_TO_DATE_RANGE,
 } from "@config/constant";
 import PaginationBar from "@component/common/PaginationBar";
-import { resetExpenseClaims, useExpenseClaims } from "@slices/expenseSlice/useExpenseClaims";
+import {
+  resetExpenseClaims,
+  useExpenseClaims,
+  useRecurringExpenseTypes,
+} from "@slices/expenseSlice/useExpenseClaims";
 import { useAppDispatch } from "@slices/store";
 import {
   CURRENCIES,
@@ -50,6 +56,20 @@ const prevMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLoc
   { month: "long" },
 );
 
+// Default window for the panels that got their own independent date-range picker
+// (Employee Spending Breakdown, Lead Approval Breakdown, Expense Type Breakdown),
+// decoupled from the page-wide chartPeriod filter.
+function getDefaultPanelToDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function getDefaultPanelFromDate(): string {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 export default function ExpenseClaims() {
   const dispatch = useAppDispatch();
   const { data, filters, loading, error, handleFiltersChange } = useExpenseClaims();
@@ -58,16 +78,31 @@ export default function ExpenseClaims() {
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY as CurrencyCode);
   const [selectedRecurringCategory, setSelectedRecurringCategory] = useState<string | null>(null);
   const [recurringPage, setRecurringPage] = useState(0);
+  const [panelFromDate, setPanelFromDate] = useState(getDefaultPanelFromDate);
+  const [panelToDate, setPanelToDate] = useState(getDefaultPanelToDate);
 
   const fmt = (v: number) => formatCurrencyValue(v, currency);
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
+
+  // Employee Spending Breakdown, Lead Approval Breakdown, and Expense Type Breakdown
+  // each run off this independent custom range instead of the page-wide chartPeriod filter.
+  const safePanelFrom = panelFromDate || getDefaultPanelFromDate();
+  const safePanelTo = panelToDate || safePanelFrom;
+  const standardPanelFrom = safePanelFrom > safePanelTo ? safePanelTo : safePanelFrom;
+  const standardPanelTo = safePanelFrom > safePanelTo ? safePanelFrom : safePanelTo;
+  const panelDateRange = `custom:${standardPanelFrom}:${standardPanelTo}`;
+
+  const { recurringExpenseTypes: panelRecurringExpenseTypes } = useRecurringExpenseTypes(
+    panelDateRange,
+    filters.businessUnit,
+  );
 
   const {
     buExpenses,
     activeClaimStats: claimStats,
     topApprovingLeads: topLeads,
-    recurringExpenseTypes: recurringExpenses,
   } = data;
+  const recurringExpenses = panelRecurringExpenseTypes;
 
   const buMaxValue = Math.max(...buExpenses.map((d) => d.value), 1);
   const claimStatsMaxValue = Math.max(...claimStats.map((d) => d.value), 1);
@@ -343,21 +378,25 @@ export default function ExpenseClaims() {
 
       <Box sx={{ mt: 2 }}>
         <EmployeeSpendingBreakdownPanel
-          dateRange={filters.dateRange}
+          dateRange={panelDateRange}
           businessUnit={filters.businessUnit}
           currency={currency}
-          chartPeriod={chartPeriod}
-          onPeriodChange={handlePeriodChange}
+          rangeFromDate={panelFromDate}
+          rangeToDate={panelToDate}
+          onRangeFromChange={(d) => setPanelFromDate(d.format("YYYY-MM-DD"))}
+          onRangeToChange={(d) => setPanelToDate(d.format("YYYY-MM-DD"))}
         />
       </Box>
 
       <Box sx={{ mt: 2 }}>
         <LeadApprovalFrequencyPanel
-          dateRange={filters.dateRange}
+          dateRange={panelDateRange}
           businessUnit={filters.businessUnit}
           currency={currency}
-          chartPeriod={chartPeriod}
-          onPeriodChange={handlePeriodChange}
+          rangeFromDate={panelFromDate}
+          rangeToDate={panelToDate}
+          onRangeFromChange={(d) => setPanelFromDate(d.format("YYYY-MM-DD"))}
+          onRangeToChange={(d) => setPanelToDate(d.format("YYYY-MM-DD"))}
           fallbackLeads={topLeads}
         />
       </Box>
@@ -381,10 +420,12 @@ export default function ExpenseClaims() {
                   Back
                 </Button>
               ) : null}
-              <ChartPeriodFilter
-                value={chartPeriod}
-                options={MONTH_OPTIONS}
-                onChange={handlePeriodChange}
+              <DateRangePickerButton
+                fromDate={dayjs(panelFromDate)}
+                toDate={dayjs(panelToDate)}
+                onFromChange={(d) => setPanelFromDate(d.format("YYYY-MM-DD"))}
+                onToChange={(d) => setPanelToDate(d.format("YYYY-MM-DD"))}
+                maxTo={dayjs()}
               />
             </Box>
           }
