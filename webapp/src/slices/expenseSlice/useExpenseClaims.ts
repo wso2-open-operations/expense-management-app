@@ -17,7 +17,7 @@ import { PayloadAction, createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import type { AppDispatch, RootState } from "@slices/store";
 import { apiService } from "@utils/apiService";
@@ -240,6 +240,50 @@ export const selectExpenseClaimsLoading = (state: RootState) =>
 export const selectExpenseClaimsError = (state: RootState) => selectExpenseClaimsState(state).error;
 export const selectExpenseClaimsFilters = (state: RootState) =>
   selectExpenseClaimsState(state).filters;
+
+// Fetches recurringExpenseTypes independently of the Redux-backed filters, so the
+// Expense Type Breakdown card can run its own date range instead of the page-wide one.
+export function useRecurringExpenseTypes(dateRange: string, businessUnit: string) {
+  const [recurringExpenseTypes, setRecurringExpenseTypes] = useState<ExpenseTypeItem[]>(
+    DEFAULT_EXPENSE_DATA.recurringExpenseTypes,
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const { year, month, monthRange } = resolveDateRangeParams(dateRange);
+    const params: Record<string, string> = { year, month, monthRange };
+    if (businessUnit && businessUnit !== "All Business Units") {
+      params.businessUnit = businessUnit;
+    }
+
+    apiService
+      .get<BackendExpenseClaimsData | null>("/expense-claims", { params })
+      .then((res) => {
+        if (!cancelled) {
+          setRecurringExpenseTypes(normalizeExpenseClaimsData(res?.data).recurringExpenseTypes);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled && !axios.isCancel(err)) {
+          setError("Failed to load expense type breakdown.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, businessUnit]);
+
+  return { recurringExpenseTypes, loading, error };
+}
 
 export function useExpenseClaims() {
   const dispatch = useDispatch<AppDispatch>();
