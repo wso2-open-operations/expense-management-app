@@ -314,7 +314,7 @@ function CategoryRow({
             <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
               {fmtSym(total)}
             </Typography>
-            <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
+            <Typography sx={{ fontSize: 11, color: "#9E9E9E" }}>
               {claimCount} claims • {percentage.toFixed(1)}%
             </Typography>
           </Box>
@@ -672,9 +672,14 @@ const compLabel = standardFrom === standardTo
             {employeeEmail}
           </Typography>
           {breakdown && (
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
-              Total: {fmtSym(breakdown.totalAmount)}
-            </Typography>
+            <>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
+                Total: {fmtSym(breakdown.totalAmount)}
+              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
+                No of Claims: {breakdown.claimCount}
+              </Typography>
+            </>
           )}
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
