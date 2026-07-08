@@ -13,16 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Box, CircularProgress, Skeleton, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
+import { Box, CircularProgress, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
 import dayjs from "dayjs";
-import { Download, ChevronDown, ChevronRight, TrendingDown, TrendingUp, X } from "lucide-react";
+import { Download, ChevronDown, ChevronRight, X } from "lucide-react";
+// Skeleton, TrendingDown, TrendingUp were used by CCPeriodComparison, which is commented out below
 
 import DateRangePickerButton from "@component/common/DateRangePickerButton";
 
 import { useEffect, useState } from "react";
 
 import {
-  type CCEmployeeBreakdownResponse,
   useCCEmployeeBreakdown,
   useCCEmployeeCategoryTransactions,
 } from "@slices/creditCardSlice/useCreditCards";
@@ -187,7 +187,6 @@ interface CCCategoryRowProps {
   color: string;
   maxTotal: number;
   compTotal: number;
-  compTxnCount: number;
   maxCompTotal: number;
   email: string;
   dateRange: string;
@@ -205,7 +204,6 @@ function CCCategoryRow({
   color,
   maxTotal,
   compTotal,
-  compTxnCount,
   maxCompTotal,
   email,
   dateRange,
@@ -291,20 +289,6 @@ function CCCategoryRow({
 
         <Box sx={{ display: "flex", gap: 2, flexShrink: 0 }}>
           <Box sx={{ textAlign: "right", minWidth: 110 }}>
-            <Typography
-              sx={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: compTotal > 0 ? "text.primary" : "text.disabled",
-              }}
-            >
-              {compTotal > 0 ? fmtSym(compTotal) : "—"}
-            </Typography>
-            <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
-              {compTxnCount > 0 ? `${compTxnCount} txns` : ""}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: "right", minWidth: 110 }}>
             <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
               {fmtSym(total)}
             </Typography>
@@ -331,6 +315,7 @@ function CCCategoryRow({
 
 
 
+/* Period comparison summary card — disabled per request, keeping for possible reuse
 interface CCPeriodComparisonProps {
   currentBreakdown: CCEmployeeBreakdownResponse | null;
   prevBreakdown: CCEmployeeBreakdownResponse | null;
@@ -484,6 +469,7 @@ function CCPeriodComparison({
     </Box>
   );
 }
+*/
 
 export interface CCEmployeeBreakdownModalProps {
   open: boolean;
@@ -514,13 +500,14 @@ export default function CCEmployeeBreakdownModal({
   const compLabel = compFromDate.slice(0, 7) === compToDate.slice(0, 7)
     ? formatMonthLabel(compFromDate)
     : `${formatMonthLabel(compFromDate)} – ${formatMonthLabel(compToDate)}`;
-  const curLabel = dateRange.startsWith("custom:")
-    ? (() => { const p = dateRange.slice(7).split(":"); return p.length === 2 ? `${formatMonthLabel(p[0])} – ${formatMonthLabel(p[1])}` : dateRange; })()
-    : dateRange;
+  // curLabel was used by CCPeriodComparison, which is commented out below
+  // const curLabel = dateRange.startsWith("custom:")
+  //   ? (() => { const p = dateRange.slice(7).split(":"); return p.length === 2 ? `${formatMonthLabel(p[0])} – ${formatMonthLabel(p[1])}` : dateRange; })()
+  //   : dateRange;
 
 
   const { breakdown, loading } = useCCEmployeeBreakdown(open ? employeeEmail : null, currentDateRange);
-  const { breakdown: compBreakdown, loading: loadingComp } = useCCEmployeeBreakdown(
+  const { breakdown: compBreakdown } = useCCEmployeeBreakdown(
     open ? employeeEmail : null,
     compDateRange,
   );
@@ -649,9 +636,26 @@ export default function CCEmployeeBreakdownModal({
       </Box>
 
       <DialogContent sx={{ p: 2.5 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1 }}>
-          Spend breakdown by engagement category
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+            mb: 1,
+          }}
+        >
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary" }}>
+            Spend breakdown by engagement category
+          </Typography>
+          <DateRangePickerButton
+            fromDate={dayjs(compFromDate)}
+            toDate={dayjs(compToDate)}
+            onFromChange={(d) => setCompFromDate(d.format("YYYY-MM-DD"))}
+            onToChange={(d) => setCompToDate(d.format("YYYY-MM-DD"))}
+            maxTo={dayjs()}
+          />
+        </Box>
 
         {loading ? (
           <Box
@@ -671,7 +675,7 @@ export default function CCEmployeeBreakdownModal({
           </Box>
         ) : (
           <>
-            <CCPeriodComparison
+            {/* <CCPeriodComparison
               currentBreakdown={breakdown}
               prevBreakdown={compBreakdown}
               loadingCurrent={loading}
@@ -679,17 +683,7 @@ export default function CCEmployeeBreakdownModal({
               fmtSym={fmtSym}
               compLabel={compLabel}
               curLabel={curLabel}
-            />
-
-            <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 1 }}>
-              <DateRangePickerButton
-                fromDate={dayjs(compFromDate)}
-                toDate={dayjs(compToDate)}
-                onFromChange={(d) => setCompFromDate(d.format("YYYY-MM-DD"))}
-                onToChange={(d) => setCompToDate(d.format("YYYY-MM-DD"))}
-                maxTo={dayjs()}
-              />
-            </Box>
+            /> */}
 
             {allCategories.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 6 }}>
@@ -711,29 +705,6 @@ export default function CCEmployeeBreakdownModal({
                 >
                   <Box sx={{ flex: 1 }} />
                   <Box sx={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
-                    <Box
-                      sx={{
-                        minWidth: 110,
-                        textAlign: "right",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 0.5,
-                      }}
-                    >
-                      {loadingComp && <CircularProgress size={10} thickness={5} />}
-                      <Typography
-                        sx={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "text.disabled",
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        Date Range
-                      </Typography>
-                    </Box>
                     <Typography
                       sx={{
                         fontSize: 10,
@@ -772,7 +743,6 @@ export default function CCEmployeeBreakdownModal({
                         color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
                         maxTotal={maxCurrent}
                         compTotal={cmp?.total ?? 0}
-                        compTxnCount={cmp?.txnCount ?? 0}
                         maxCompTotal={maxComp}
                         email={employeeEmail ?? ""}
                         dateRange={currentDateRange}
