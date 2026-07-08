@@ -676,7 +676,7 @@ const compLabel = standardFrom === standardTo
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
                 Total: {fmtSym(breakdown.totalAmount)}
               </Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#9E9E9E" }}>
                 No of Claims: {breakdown.claimCount}
               </Typography>
             </>
