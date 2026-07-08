@@ -595,7 +595,7 @@ export default function CCEmployeeBreakdownModal({
                 Total: {fmtSym(breakdown.totalAmount)}
               </Typography>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#9E9E9E" }}>
-                No of Claims: {breakdown.txnCount}
+                No of Transactions: {breakdown.txnCount}
               </Typography>
             </>
           )}
