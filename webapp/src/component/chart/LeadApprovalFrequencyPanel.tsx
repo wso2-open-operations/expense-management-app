@@ -14,14 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, Skeleton, Typography } from "@wso2/oxygen-ui";
+import dayjs, { type Dayjs } from "dayjs";
 
 import { useEffect, useMemo, useState } from "react";
 
 import ChartCard from "@component/chart/ChartCard";
-import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
+import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import PaginationBar from "@component/common/PaginationBar";
 import SearchBox from "@component/common/SearchBox";
-import { MONTH_OPTIONS, PAGE_SIZE_LEADS } from "@config/constant";
+import { PAGE_SIZE_LEADS } from "@config/constant";
 import {
   type LeadFrequencyItem,
   formatResponseTime,
@@ -49,8 +50,10 @@ interface LeadApprovalFrequencyPanelProps {
   dateRange: string;
   businessUnit: string;
   currency: CurrencyCode;
-  chartPeriod: string;
-  onPeriodChange: (period: string) => void;
+  rangeFromDate: string;
+  rangeToDate: string;
+  onRangeFromChange: (d: Dayjs) => void;
+  onRangeToChange: (d: Dayjs) => void;
   fallbackLeads?: TopLeadItem[];
 }
 
@@ -156,8 +159,10 @@ export default function LeadApprovalFrequencyPanel({
   dateRange,
   businessUnit,
   currency,
-  chartPeriod,
-  onPeriodChange,
+  rangeFromDate,
+  rangeToDate,
+  onRangeFromChange,
+  onRangeToChange,
   fallbackLeads = [],
 }: LeadApprovalFrequencyPanelProps) {
   const [search, setSearch] = useState("");
@@ -206,10 +211,12 @@ export default function LeadApprovalFrequencyPanel({
         subtitle="Average days from claim submission to lead approval"
         minHeight={420}
         action={
-          <ChartPeriodFilter
-            value={chartPeriod}
-            options={MONTH_OPTIONS}
-            onChange={onPeriodChange}
+          <DateRangePickerButton
+            fromDate={dayjs(rangeFromDate)}
+            toDate={dayjs(rangeToDate)}
+            onFromChange={onRangeFromChange}
+            onToChange={onRangeToChange}
+            maxTo={dayjs()}
           />
         }
       >
