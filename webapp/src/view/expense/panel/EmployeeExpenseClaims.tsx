@@ -24,7 +24,7 @@ import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
 import ExpenseCategoryTransactionsModal from "@component/chart/ExpenseCategoryTransactionsModal";
 import CurrencySelector from "@component/common/CurrencySelector";
 import PaginationBar from "@component/common/PaginationBar";
-import { DEFAULT_CURRENCY, MONTH_OPTIONS, PERIOD_TO_DATE_RANGE } from "@config/constant";
+import { DEFAULT_CURRENCY, EXPENSE_PERIOD_OPTIONS, EXPENSE_PERIOD_TO_DATE_RANGE } from "@config/constant";
 import {
   useMyExpenseBreakdown,
   useMyExpenseSummary,
@@ -38,14 +38,14 @@ const SEGMENT_COLORS = ["#2E8B57", "#4A8EDB", "#AB7AE0", "#FF8A4C", "#E85D75"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function EmployeeExpenseClaims() {
-  const [chartPeriod, setChartPeriod] = useState("all");
+  const [chartPeriod, setChartPeriod] = useState("annually");
   const [modalCategory, setModalCategory] = useState<string | null>(null);
   const [catPage, setCatPage] = useState(0);
   const [currency, setCurrency] = useState<CurrencyCode>(
     () => (localStorage.getItem("defaultCurrency") as CurrencyCode) ?? DEFAULT_CURRENCY,
   );
 
-  const dateRange = PERIOD_TO_DATE_RANGE[chartPeriod] ?? "All Time";
+  const dateRange = EXPENSE_PERIOD_TO_DATE_RANGE[chartPeriod] ?? "Year to Date";
 
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
@@ -124,8 +124,8 @@ export default function EmployeeExpenseClaims() {
             />
             <SummaryCard
               icon={FileText}
-              iconBg="#dbeafe"
-              iconColor="#2563eb"
+              iconBg="#FEF0EB"
+              iconColor="#E8420A"
               title="Number of Claims"
               chipLabel={String(currentYear)}
               value={String(totalCount)}
@@ -146,7 +146,7 @@ export default function EmployeeExpenseClaims() {
         action={
           <ChartPeriodFilter
             value={chartPeriod}
-            options={MONTH_OPTIONS}
+            options={EXPENSE_PERIOD_OPTIONS}
             onChange={(v) => { setChartPeriod(v); setModalCategory(null); setCatPage(0); }}
           />
         }
