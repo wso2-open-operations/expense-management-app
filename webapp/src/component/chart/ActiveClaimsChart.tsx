@@ -53,10 +53,9 @@ export default function ActiveClaimsChart({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
 
-  const barColor = isDark ? "#e3f2fd" : "#4A8EDB";
-  const barHoverColor = isDark ? "#bbdefb" : "#4A8EDB";
+  const barColor = theme.palette.primary.main;
+  const barHoverColor = theme.palette.primary.dark;
 
   const selectedLabel = monthOptions.find((o) => o.value === month)?.label ?? "";
 
