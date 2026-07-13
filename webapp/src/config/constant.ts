@@ -57,24 +57,24 @@ const currentMonth = new Date().toLocaleString("default", { month: "long" });
 export const OPD_SUMMARY_CARDS_CONFIG = {
   lastYearCard: {
     icon: DollarSign,
-    iconBg: "#fff3e0",
-    iconColor: "#f57c00",
+    iconBg: "#FFF7ED",
+    iconColor: "#F97316",
     title: "Claim Amount in",
     chipLabel: `${currentYear}`,
     suffix: "LKR",
   },
   currentMonthCard: {
     icon: TrendingUp,
-    iconBg: "#e3f2fd",
-    iconColor: "#1976d2",
+    iconBg: "#FFF7ED",
+    iconColor: "#F97316",
     title: "Claim Amount in",
     chipLabel: `${currentMonth}`,
     suffix: "LKR",
   },
   previousYearCard: {
     icon: Hash,
-    iconBg: "#f3e5f5",
-    iconColor: "#7b1fa2",
+    iconBg: "#FFF7ED",
+    iconColor: "#F97316",
     title: "Number of Claims",
     chipLabel: `${currentYear - 1}`,
   },
@@ -97,6 +97,26 @@ export const MONTH_OPTIONS = [
   { value: "pastNine", label: "Past 9 Months" },
   { value: "pastTwelve", label: "Past 12 Months" },
 ];
+
+// Expense Claims-specific period filter (Annually/Quarterly/Monthly), separate from
+// MONTH_OPTIONS since that constant is also shared by OPD Claims and Lead Approval.
+export const EXPENSE_PERIOD_OPTIONS = [
+  { value: "annually", label: "Annually" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "monthly", label: "Monthly" },
+];
+
+export const EXPENSE_PERIOD_TO_DATE_RANGE: Record<string, string> = {
+  annually: "Year to Date",
+  quarterly: "Last 3 Months",
+  monthly: "This Month",
+};
+
+export const EXPENSE_DATE_RANGE_TO_PERIOD: Record<string, string> = {
+  "Year to Date": "annually",
+  "Last 3 Months": "quarterly",
+  "This Month": "monthly",
+};
 
 export const PAGE_SIZE_EMPLOYEES = 7;
 export const PAGE_SIZE_LEADS = 7;
