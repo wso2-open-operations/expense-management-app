@@ -69,25 +69,18 @@ export interface EmployeeBreakdownExportParams {
   dateRange: string;
   statusTab: string;
   currency: string;
-  totalAmount: number;
-  claimCount: number;
-  compLabel: string;
-  prevTotalAmount: number;
-  prevClaimCount: number;
+  periodLabels: string[];
+  periodTotals: Array<{ totalAmount: number; claimCount: number }>;
   categories: Array<{
     category: string;
-    total: number;
-    claimCount: number;
     percentage: number;
-    compTotal: number;
-    compClaimCount: number;
-    subCategories: Array<{ name: string; currentTotal: number; compTotal: number }>;
+    values: Array<{ total: number; claimCount: number }>;
+    subCategories: Array<{ name: string; total: number }>;
   }>;
 }
 
 export function exportEmployeeBreakdown(p: EmployeeBreakdownExportParams): void {
   const wb = XLSX.utils.book_new();
-  const compLabel = p.compLabel;
 
   addSheet(wb, "Summary", [
     ["Field", "Value"],
@@ -97,33 +90,37 @@ export function exportEmployeeBreakdown(p: EmployeeBreakdownExportParams): void 
     [EMP_SUMMARY_FIELDS.statusFilter, p.statusTab],
     [EMP_SUMMARY_FIELDS.currency,     p.currency],
     [],
-    ["", "Current Period", compLabel],
-    [EMP_SUMMARY_FIELDS.totalAmount, p.totalAmount, p.prevTotalAmount],
-    [EMP_SUMMARY_FIELDS.totalClaims, p.claimCount,  p.prevClaimCount],
+    ["", ...p.periodLabels],
+    [EMP_SUMMARY_FIELDS.totalAmount, ...p.periodTotals.map((t) => t.totalAmount)],
+    [EMP_SUMMARY_FIELDS.totalClaims, ...p.periodTotals.map((t) => t.claimCount)],
   ]);
 
-  const breakdownRows: unknown[][] = [
-    [
-      EMP_CATEGORY_COLS.category,
-      EMP_CATEGORY_COLS.subCategory,
-      `${compLabel} ${EMP_CATEGORY_COLS.compAmount} (${p.currency})`,
-      `${compLabel} ${EMP_CATEGORY_COLS.compClaims}`,
-      `${EMP_CATEGORY_COLS.currentAmount} (${p.currency})`,
-      EMP_CATEGORY_COLS.currentClaims,
-      EMP_CATEGORY_COLS.pctOfTotal,
-      EMP_CATEGORY_COLS.change,
-    ],
-  ];
+  const header: unknown[] = [EMP_CATEGORY_COLS.category, EMP_CATEGORY_COLS.subCategory];
+  p.periodLabels.forEach((label) => {
+    header.push(`${label} ${EMP_CATEGORY_COLS.compAmount} (${p.currency})`);
+    header.push(`${label} ${EMP_CATEGORY_COLS.compClaims}`);
+  });
+  header.push(EMP_CATEGORY_COLS.pctOfTotal);
+
+  const breakdownRows: unknown[][] = [header];
+  const lastPeriodIdx = p.periodLabels.length - 1;
   for (const cat of p.categories) {
-    const change =
-      cat.compTotal > 0
-        ? `${(((cat.total - cat.compTotal) / cat.compTotal) * 100).toFixed(1)}%`
-        : cat.total > 0
-          ? "+100%"
-          : "—";
-    breakdownRows.push([cat.category, "", cat.compTotal || "—", cat.compClaimCount || "—", cat.total, cat.claimCount, `${cat.percentage.toFixed(1)}%`, change]);
+    const row: unknown[] = [cat.category, ""];
+    cat.values.forEach((v) => {
+      row.push(v.total > 0 ? v.total : "—");
+      row.push(v.claimCount > 0 ? v.claimCount : "—");
+    });
+    row.push(`${cat.percentage.toFixed(1)}%`);
+    breakdownRows.push(row);
+
     for (const sub of cat.subCategories) {
-      breakdownRows.push(["", sub.name, sub.compTotal || "—", "", sub.currentTotal, "", "", ""]);
+      const subRow: unknown[] = ["", sub.name];
+      p.periodLabels.forEach((_, idx) => {
+        subRow.push(idx === lastPeriodIdx && sub.total > 0 ? sub.total : "—");
+        subRow.push("");
+      });
+      subRow.push("");
+      breakdownRows.push(subRow);
     }
   }
   addSheet(wb, "Category Breakdown", breakdownRows);
@@ -335,24 +332,17 @@ export interface CCEmployeeBreakdownExportParams {
   email: string;
   dateRange: string;
   currency: string;
-  compLabel: string;
-  totalAmount: number;
-  txnCount: number;
-  prevTotalAmount: number;
-  prevTxnCount: number;
+  periodLabels: string[];
+  periodTotals: Array<{ totalAmount: number; txnCount: number }>;
   categories: Array<{
     category: string;
-    total: number;
-    txnCount: number;
     percentage: number;
-    compTotal: number;
-    compTxnCount: number;
+    values: Array<{ total: number; txnCount: number }>;
   }>;
 }
 
 export function exportCCEmployeeBreakdown(p: CCEmployeeBreakdownExportParams): void {
   const wb = XLSX.utils.book_new();
-  const compLabel = p.compLabel;
 
   addSheet(wb, "Summary", [
     ["Field", "Value"],
@@ -361,29 +351,28 @@ export function exportCCEmployeeBreakdown(p: CCEmployeeBreakdownExportParams): v
     [CC_EMP_SUMMARY_FIELDS.period,       p.dateRange],
     [CC_EMP_SUMMARY_FIELDS.currency,     p.currency],
     [],
-    ["", "Current Period", compLabel],
-    [CC_EMP_SUMMARY_FIELDS.totalAmount, p.totalAmount, p.prevTotalAmount],
-    [CC_EMP_SUMMARY_FIELDS.totalTxns,   p.txnCount,    p.prevTxnCount],
+    ["", ...p.periodLabels],
+    [CC_EMP_SUMMARY_FIELDS.totalAmount, ...p.periodTotals.map((t) => t.totalAmount)],
+    [CC_EMP_SUMMARY_FIELDS.totalTxns,   ...p.periodTotals.map((t) => t.txnCount)],
   ]);
 
-  const catRows: unknown[][] = [
-    [
-      CC_EMP_CATEGORY_COLS.category,
-      `${compLabel} ${CC_EMP_CATEGORY_COLS.compAmount} (${p.currency})`,
-      `${compLabel} ${CC_EMP_CATEGORY_COLS.compTxns}`,
-      `${CC_EMP_CATEGORY_COLS.currentAmount} (${p.currency})`,
-      CC_EMP_CATEGORY_COLS.currentTxns,
-      CC_EMP_CATEGORY_COLS.pctOfTotal,
-    ],
-    ...p.categories.map((c) => [
-      c.category,
-      c.compTotal > 0 ? c.compTotal : "—",
-      c.compTxnCount > 0 ? c.compTxnCount : "—",
-      c.total,
-      c.txnCount,
-      `${c.percentage.toFixed(1)}%`,
-    ]),
-  ];
+  const header: unknown[] = [CC_EMP_CATEGORY_COLS.category];
+  p.periodLabels.forEach((label) => {
+    header.push(`${label} ${CC_EMP_CATEGORY_COLS.compAmount} (${p.currency})`);
+    header.push(`${label} ${CC_EMP_CATEGORY_COLS.compTxns}`);
+  });
+  header.push(CC_EMP_CATEGORY_COLS.pctOfTotal);
+
+  const catRows: unknown[][] = [header];
+  for (const cat of p.categories) {
+    const row: unknown[] = [cat.category];
+    cat.values.forEach((v) => {
+      row.push(v.total > 0 ? v.total : "—");
+      row.push(v.txnCount > 0 ? v.txnCount : "—");
+    });
+    row.push(`${cat.percentage.toFixed(1)}%`);
+    catRows.push(row);
+  }
   addSheet(wb, "Category Breakdown", catRows);
 
   XLSX.writeFile(

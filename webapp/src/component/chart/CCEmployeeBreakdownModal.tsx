@@ -14,11 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, CircularProgress, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
-import dayjs from "dayjs";
 import { Download, ChevronDown, ChevronRight, X } from "lucide-react";
 // Skeleton, TrendingDown, TrendingUp were used by CCPeriodComparison, which is commented out below
-
-import DateRangePickerButton from "@component/common/DateRangePickerButton";
 
 import { useEffect, useState } from "react";
 
@@ -30,66 +27,81 @@ import { type CurrencyCode, formatWithSymbol } from "@utils/currency";
 import { exportCCEmployeeBreakdown } from "@utils/exportExcel";
 
 const SEGMENT_COLORS = [
-  "#00B4D8",
   "#FF8A4C",
-  "#F4B400",
   "#2E8B57",
   "#AB7AE0",
-  "#8C9EFF",
   "#00A6A6",
   "#E85D75",
   "#FF6B9D",
-  "#4A8EDB",
   "#90EE90",
   "#DA70D6",
 ];
 
-function formatMonthLabel(ym: string): string {
-  const [y, m] = ym.slice(0, 7).split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-}
+const PERIOD_GRANULARITIES = ["Annually", "Quarterly", "Monthly"] as const;
+type PeriodGranularity = (typeof PERIOD_GRANULARITIES)[number];
 
-function getDefaultCompDate(): string {
+const PERIOD_COLUMN_COUNT = 5;
+
+// Builds N fixed calendar periods (oldest first) for the chosen granularity, e.g.
+// Annually -> last 5 calendar years, Quarterly -> last 5 quarters, Monthly -> last 5 months.
+function generatePeriodColumns(
+  granularity: PeriodGranularity,
+): { label: string; dateRange: string }[] {
   const now = new Date();
-  const pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, "0")}-01`;
+  const columns: { label: string; dateRange: string }[] = [];
+
+  if (granularity === "Annually") {
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const year = now.getFullYear() - i;
+      columns.push({ label: String(year), dateRange: `custom:${year}-1:${year}-12` });
+    }
+  } else if (granularity === "Quarterly") {
+    const currentAbsQuarter = now.getFullYear() * 4 + Math.floor(now.getMonth() / 3);
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const absQuarter = currentAbsQuarter - i;
+      const year = Math.floor(absQuarter / 4);
+      const q = absQuarter % 4;
+      const startMonth = q * 3 + 1;
+      const endMonth = q * 3 + 3;
+      columns.push({
+        label: `Q${q + 1} ${year}`,
+        dateRange: `custom:${year}-${startMonth}:${year}-${endMonth}`,
+      });
+    }
+  } else {
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      columns.push({
+        label: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        dateRange: `custom:${year}-${month}:${year}-${month}`,
+      });
+    }
+  }
+
+  return columns;
 }
 
 interface CCSubCategoryPanelProps {
   email: string;
   category: string;
   dateRange: string;
-  compDateRange: string;
   fmtSym: (v: number) => string;
   color: string;
 }
 
-function CCSubCategoryPanel({
-  email,
-  category,
-  dateRange,
-  compDateRange,
-  fmtSym,
-  color,
-}: CCSubCategoryPanelProps) {
-  const { transactions: curTxns, loading: curLoading } = useCCEmployeeCategoryTransactions(
+function CCSubCategoryPanel({ email, category, dateRange, fmtSym, color }: CCSubCategoryPanelProps) {
+  const { transactions: txns, loading } = useCCEmployeeCategoryTransactions(
     email,
     category,
     dateRange,
   );
-  const { transactions: cmpTxns, loading: cmpLoading } = useCCEmployeeCategoryTransactions(
-    email,
-    category,
-    compDateRange,
-  );
 
-  const curMap = new Map<string, number>();
-  curTxns.forEach((t) => curMap.set(t.description, (curMap.get(t.description) ?? 0) + t.amount));
+  const amountMap = new Map<string, number>();
+  txns.forEach((t) => amountMap.set(t.description, (amountMap.get(t.description) ?? 0) + t.amount));
 
-  const cmpMap = new Map<string, number>();
-  cmpTxns.forEach((t) => cmpMap.set(t.description, (cmpMap.get(t.description) ?? 0) + t.amount));
-
-  const allDescs = [...new Set([...curMap.keys(), ...cmpMap.keys()])].sort();
+  const allDescs = [...amountMap.keys()].sort();
 
   return (
     <Box
@@ -103,7 +115,7 @@ function CCSubCategoryPanel({
         overflow: "hidden",
       }}
     >
-      {curLoading || cmpLoading ? (
+      {loading ? (
         <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
           <CircularProgress size={20} />
         </Box>
@@ -115,8 +127,7 @@ function CCSubCategoryPanel({
         </Box>
       ) : (
         allDescs.map((desc, idx) => {
-          const cur = curMap.get(desc) ?? 0;
-          const cmp = cmpMap.get(desc) ?? 0;
+          const amount = amountMap.get(desc) ?? 0;
           return (
             <Box
               key={`${desc}-${idx}`}
@@ -150,26 +161,14 @@ function CCSubCategoryPanel({
               <Typography
                 sx={{
                   fontSize: 12,
-                  fontWeight: 600,
-                  color: cmp > 0 ? "text.secondary" : "text.disabled",
-                  minWidth: 110,
-                  textAlign: "right",
-                  flexShrink: 0,
-                }}
-              >
-                {cmp > 0 ? fmtSym(cmp) : "—"}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 12,
                   fontWeight: 700,
-                  color: cur > 0 ? "text.primary" : "text.disabled",
+                  color: amount > 0 ? "text.primary" : "text.disabled",
                   minWidth: 110,
                   textAlign: "right",
                   flexShrink: 0,
                 }}
               >
-                {cur > 0 ? fmtSym(cur) : "—"}
+                {amount > 0 ? fmtSym(amount) : ""}
               </Typography>
             </Box>
           );
@@ -179,50 +178,38 @@ function CCSubCategoryPanel({
   );
 }
 
-interface CCCategoryRowProps {
+interface CCCategoryTableRowProps {
   category: string;
-  total: number;
-  txnCount: number;
-  percentage: number;
   color: string;
-  maxTotal: number;
-  compTotal: number;
-  maxCompTotal: number;
-  email: string;
-  dateRange: string;
-  compDateRange: string;
+  values: number[];
+  columnCount: number;
   fmtSym: (v: number) => string;
+  email: string;
+  latestDateRange: string;
   isExpanded: boolean;
   onToggle: () => void;
 }
 
-function CCCategoryRow({
+function CCCategoryTableRow({
   category,
-  total,
-  txnCount,
-  percentage,
   color,
-  maxTotal,
-  compTotal,
-  maxCompTotal,
-  email,
-  dateRange,
-  compDateRange,
+  values,
+  columnCount,
   fmtSym,
+  email,
+  latestDateRange,
   isExpanded,
   onToggle,
-}: CCCategoryRowProps) {
-  const curBarW = maxTotal > 0 ? Math.min(100, (total / maxTotal) * 100) : 0;
-  const cmpBarW = maxCompTotal > 0 ? Math.min(100, (compTotal / maxCompTotal) * 100) : 0;
-
+}: CCCategoryTableRowProps) {
   return (
     <Box>
       <Box
         onClick={onToggle}
         sx={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: `170px repeat(${columnCount}, 1fr)`,
           alignItems: "center",
-          gap: 1.5,
+          columnGap: 1.5,
           px: 1.5,
           py: 1.2,
           borderRadius: 1.5,
@@ -235,76 +222,46 @@ function CCCategoryRow({
           mb: 0.5,
         }}
       >
-        <Box sx={{ color: "text.secondary", display: "flex", alignItems: "center" }}>
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </Box>
-
-        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
-
-        <Typography
-          sx={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "text.primary",
-            width: 130,
-            maxWidth: 130,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-          title={category}
-        >
-          {category}
-        </Typography>
-
-        <Box sx={{ flex: 1, mx: 1.5, position: "relative", height: 10 }}>
-          <Box sx={{ position: "absolute", inset: 0, bgcolor: "action.hover", borderRadius: 5 }} />
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: `${cmpBarW}%`,
-              bgcolor: color,
-              opacity: 0.3,
-              borderRadius: 5,
-              transition: "width 0.4s ease",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              top: 2,
-              bottom: 2,
-              left: 0,
-              width: `${curBarW}%`,
-              bgcolor: color,
-              borderRadius: 5,
-              transition: "width 0.4s ease",
-            }}
-          />
-        </Box>
-
-        <Box sx={{ display: "flex", gap: 2, flexShrink: 0 }}>
-          <Box sx={{ textAlign: "right", minWidth: 110 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
-              {fmtSym(total)}
-            </Typography>
-            <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
-              {txnCount} txns • {percentage.toFixed(1)}%
-            </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+          <Box sx={{ color: "text.secondary", display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </Box>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "text.primary",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={category}
+          >
+            {category}
+          </Typography>
         </Box>
+
+        {values.map((value, idx) => (
+          <Typography
+            key={idx}
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: value > 0 ? "text.primary" : "text.disabled",
+              textAlign: "right",
+            }}
+          >
+            {value > 0 ? fmtSym(value) : ""}
+          </Typography>
+        ))}
       </Box>
 
       {isExpanded && (
         <CCSubCategoryPanel
           email={email}
           category={category}
-          dateRange={dateRange}
-          compDateRange={compDateRange}
+          dateRange={latestDateRange}
           fmtSym={fmtSym}
           color={color}
         />
@@ -489,44 +446,38 @@ export default function CCEmployeeBreakdownModal({
   dateRange,
 }: CCEmployeeBreakdownModalProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [compFromDate, setCompFromDate] = useState(getDefaultCompDate);
-  const [compToDate, setCompToDate] = useState(getDefaultCompDate);
+  const [periodGranularity, setPeriodGranularity] = useState<PeriodGranularity>("Annually");
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
   const currentDateRange = dateRange;
-                         // month and a year not a specific day
-  const compDateRange = `custom:${compFromDate.slice(0, 7)}:${compToDate.slice(0, 7)}`;
-  const compLabel = compFromDate.slice(0, 7) === compToDate.slice(0, 7)
-    ? formatMonthLabel(compFromDate)
-    : `${formatMonthLabel(compFromDate)} – ${formatMonthLabel(compToDate)}`;
-  // curLabel was used by CCPeriodComparison, which is commented out below
-  // const curLabel = dateRange.startsWith("custom:")
-  //   ? (() => { const p = dateRange.slice(7).split(":"); return p.length === 2 ? `${formatMonthLabel(p[0])} – ${formatMonthLabel(p[1])}` : dateRange; })()
-  //   : dateRange;
+  const periodColumns = generatePeriodColumns(periodGranularity);
 
+  const { breakdown } = useCCEmployeeBreakdown(open ? employeeEmail : null, currentDateRange);
 
-  const { breakdown, loading } = useCCEmployeeBreakdown(open ? employeeEmail : null, currentDateRange);
-  const { breakdown: compBreakdown } = useCCEmployeeBreakdown(
-    open ? employeeEmail : null,
-    compDateRange,
-  );
+  // Rules-of-hooks safe: PERIOD_COLUMN_COUNT is a fixed constant, so this is always 5 calls.
+  const period0 = useCCEmployeeBreakdown(open ? employeeEmail : null, periodColumns[0].dateRange);
+  const period1 = useCCEmployeeBreakdown(open ? employeeEmail : null, periodColumns[1].dateRange);
+  const period2 = useCCEmployeeBreakdown(open ? employeeEmail : null, periodColumns[2].dateRange);
+  const period3 = useCCEmployeeBreakdown(open ? employeeEmail : null, periodColumns[3].dateRange);
+  const period4 = useCCEmployeeBreakdown(open ? employeeEmail : null, periodColumns[4].dateRange);
+  const periodBreakdowns = [period0, period1, period2, period3, period4];
 
   useEffect(() => {
     if (open) {
       setExpandedCategory(null);
-      setCompFromDate(getDefaultCompDate());
-      setCompToDate(getDefaultCompDate());
+      setPeriodGranularity("Annually");
     }
   }, [open, employeeEmail]);
 
-  const currentMap = new Map((breakdown?.categories ?? []).map((c) => [c.category, c]));
-  const compMap = new Map((compBreakdown?.categories ?? []).map((c) => [c.category, c]));
-  // Merge categories from both periods so all categories show regardless of which period has data
-  
-  const allCategories = [...new Set([...currentMap.keys(), ...compMap.keys()])];
-  const maxCurrent = breakdown ? Math.max(...breakdown.categories.map((c) => c.total), 1) : 1;
-  const maxComp = compBreakdown ? Math.max(...compBreakdown.categories.map((c) => c.total), 1) : 1;
+  const periodCategoryMaps = periodBreakdowns.map(
+    (p) => new Map((p.breakdown?.categories ?? []).map((c) => [c.category, c])),
+  );
+  const latestCategoryMap = periodCategoryMaps[periodCategoryMaps.length - 1];
+  const allCategories = [...new Set(periodCategoryMaps.flatMap((m) => [...m.keys()]))].sort(
+    (a, b) => (latestCategoryMap.get(b)?.total ?? 0) - (latestCategoryMap.get(a)?.total ?? 0),
+  );
+  const anyPeriodLoading = periodBreakdowns.some((p) => p.loading);
 
   const handleDownload = () => {
     if (!breakdown || !employeeEmail) return;
@@ -535,22 +486,19 @@ export default function CCEmployeeBreakdownModal({
       email: employeeEmail,
       dateRange: currentDateRange,
       currency,
-      compLabel,
-      totalAmount: breakdown.totalAmount,
-      txnCount: breakdown.txnCount,
-      prevTotalAmount: compBreakdown?.totalAmount ?? 0,
-      prevTxnCount: compBreakdown?.txnCount ?? 0,
-      categories: breakdown.categories.map((cat) => {
-        const cmp = compMap.get(cat.category);
-        return {
-          category: cat.category,
-          total: cat.total,
-          txnCount: cat.txnCount,
-          percentage: cat.percentage,
-          compTotal: cmp?.total ?? 0,
-          compTxnCount: cmp?.txnCount ?? 0,
-        };
-      }),
+      periodLabels: periodColumns.map((c) => c.label),
+      periodTotals: periodBreakdowns.map((p) => ({
+        totalAmount: p.breakdown?.totalAmount ?? 0,
+        txnCount: p.breakdown?.txnCount ?? 0,
+      })),
+      categories: allCategories.map((catKey) => ({
+        category: catKey,
+        percentage: latestCategoryMap.get(catKey)?.percentage ?? 0,
+        values: periodCategoryMaps.map((m) => ({
+          total: m.get(catKey)?.total ?? 0,
+          txnCount: m.get(catKey)?.txnCount ?? 0,
+        })),
+      })),
     });
   };
 
@@ -608,17 +556,18 @@ export default function CCEmployeeBreakdownModal({
               alignItems: "center",
               gap: 0.6,
               cursor: breakdown ? "pointer" : "not-allowed",
-              px: 1.5,
-              py: 0.55,
-              borderRadius: "20px",
-              border: "1.5px solid",
-              borderColor: breakdown ? "warning.main" : "text.disabled",
-              color: breakdown ? "warning.main" : "text.disabled",
+              px: 2,
+              py: 0.7,
+              borderRadius: 1.5,
+              bgcolor: breakdown ? "primary.main" : "text.disabled",
+              color: "#fff",
               opacity: breakdown ? 1 : 0.5,
               fontWeight: 700,
               fontSize: 13,
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
               transition: "all 0.15s ease",
-              "&:hover": breakdown ? { bgcolor: "warning.main", color: "#fff" } : {},
+              "&:hover": breakdown ? { bgcolor: "primary.dark" } : {},
               userSelect: "none",
             }}
           >
@@ -645,24 +594,41 @@ export default function CCEmployeeBreakdownModal({
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1,
-            mb: 1,
+            gap: 3,
+            mb: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary" }}>
-            Spend breakdown by engagement category
-          </Typography>
-          <DateRangePickerButton
-            fromDate={dayjs(compFromDate)}
-            toDate={dayjs(compToDate)}
-            onFromChange={(d) => setCompFromDate(d.format("YYYY-MM-DD"))}
-            onToChange={(d) => setCompToDate(d.format("YYYY-MM-DD"))}
-            maxTo={dayjs()}
-          />
+          {PERIOD_GRANULARITIES.map((granularity) => (
+            <Box
+              key={granularity}
+              onClick={() => setPeriodGranularity(granularity)}
+              sx={{
+                pb: 1,
+                cursor: "pointer",
+                borderBottom: "2px solid",
+                borderColor: periodGranularity === granularity ? "primary.main" : "transparent",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: periodGranularity === granularity ? "primary.main" : "text.secondary",
+                }}
+              >
+                {granularity}
+              </Typography>
+            </Box>
+          ))}
         </Box>
 
-        {loading ? (
+        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1 }}>
+          Spend breakdown by engagement category
+        </Typography>
+
+        {anyPeriodLoading ? (
           <Box
             sx={{
               display: "flex",
@@ -680,16 +646,6 @@ export default function CCEmployeeBreakdownModal({
           </Box>
         ) : (
           <>
-            {/* <CCPeriodComparison
-              currentBreakdown={breakdown}
-              prevBreakdown={compBreakdown}
-              loadingCurrent={loading}
-              loadingPrev={loadingComp}
-              fmtSym={fmtSym}
-              compLabel={compLabel}
-              curLabel={curLabel}
-            /> */}
-
             {allCategories.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 6 }}>
                 <Typography sx={{ color: "text.disabled", fontSize: 14 }}>
@@ -700,30 +656,32 @@ export default function CCEmployeeBreakdownModal({
               <>
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    pl: 1.5,
-                    pr: 2,
+                    display: "grid",
+                    gridTemplateColumns: `170px repeat(${periodColumns.length}, 1fr)`,
+                    columnGap: 1.5,
+                    px: 1.5,
                     pb: 0.5,
-                    gap: 1.5,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    mb: 0.5,
                   }}
                 >
-                  <Box sx={{ flex: 1 }} />
-                  <Box sx={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
+                  <Box />
+                  {periodColumns.map((col) => (
                     <Typography
+                      key={col.label}
                       sx={{
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 13,
+                        fontWeight: 800,
                         color: "text.disabled",
                         textTransform: "uppercase",
                         letterSpacing: 0.5,
-                        minWidth: 110,
                         textAlign: "right",
                       }}
                     >
-                      This Period
+                      {col.label}
                     </Typography>
-                  </Box>
+                  ))}
                 </Box>
                 <Box
                   sx={{
@@ -735,33 +693,47 @@ export default function CCEmployeeBreakdownModal({
                     "&::-webkit-scrollbar-thumb": { bgcolor: "text.disabled", borderRadius: 2 },
                   }}
                 >
-                  {allCategories.map((catKey, i) => {
-                    const cur = currentMap.get(catKey);
-                    const cmp = compMap.get(catKey);
-                    return (
-                      <CCCategoryRow
-                        key={catKey}
-                        category={catKey}
-                        total={cur?.total ?? 0}
-                        txnCount={cur?.txnCount ?? 0}
-                        percentage={cur?.percentage ?? 0}
-                        color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
-                        maxTotal={maxCurrent}
-                        compTotal={cmp?.total ?? 0}
-                        maxCompTotal={maxComp}
-                        email={employeeEmail ?? ""}
-                        dateRange={currentDateRange}
-                        compDateRange={compDateRange}
-                        fmtSym={fmtSym}
-                        isExpanded={expandedCategory === catKey}
-                        onToggle={() =>
-                          setExpandedCategory((prev) =>
-                            prev === catKey ? null : catKey,
-                          )
-                        }
-                      />
-                    );
-                  })}
+                  {allCategories.map((catKey, i) => (
+                    <CCCategoryTableRow
+                      key={catKey}
+                      category={catKey}
+                      color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
+                      values={periodCategoryMaps.map((m) => m.get(catKey)?.total ?? 0)}
+                      columnCount={periodColumns.length}
+                      email={employeeEmail ?? ""}
+                      latestDateRange={periodColumns[periodColumns.length - 1].dateRange}
+                      fmtSym={fmtSym}
+                      isExpanded={expandedCategory === catKey}
+                      onToggle={() =>
+                        setExpandedCategory((prev) => (prev === catKey ? null : catKey))
+                      }
+                    />
+                  ))}
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: `170px repeat(${periodColumns.length}, 1fr)`,
+                      columnGap: 1.5,
+                      alignItems: "center",
+                      px: 1.5,
+                      py: 1.2,
+                      mt: 0.5,
+                      borderTop: "2px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                      Total
+                    </Typography>
+                    {periodBreakdowns.map((p, idx) => (
+                      <Typography
+                        key={idx}
+                        sx={{ fontSize: 13, fontWeight: 800, color: "text.primary", textAlign: "right" }}
+                      >
+                        {fmtSym(p.breakdown?.totalAmount ?? 0)}
+                      </Typography>
+                    ))}
+                  </Box>
                 </Box>
               </>
             )}
