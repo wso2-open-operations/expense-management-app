@@ -261,8 +261,6 @@ export default function LeadApprovalFrequencyModal({
   );
   const grandTotal = totalAmount > 0 ? totalAmount : 1;
 
-  const maxEmpCount = employeeBreakdown.length > 0 ? employeeBreakdown[0].count : 1;
-
   const freqLabel = detail ? formatResponseTime(detail.avgResponseDays) : null;
 
   const lastDate = detail?.lastApprovedDate
@@ -334,20 +332,19 @@ export default function LeadApprovalFrequencyModal({
               display: "flex", alignItems: "center", gap: 0.6,
               cursor: detail ? "pointer" : "not-allowed",
               opacity: detail ? 1 : 0.5,
-              px: 1.5, py: 0.55,
-              borderRadius: "20px",
-              border: "1.5px solid",
-              borderColor: "warning.main",
-              color: "warning.main",
+              px: 2, py: 0.7,
+              borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "#fff",
               fontWeight: 700,
               fontSize: 13,
               transition: "all 0.15s ease",
-              "&:hover": detail ? { bgcolor: "warning.main", color: "#fff" } : {},
+              "&:hover": detail ? { bgcolor: "primary.dark" } : {},
               userSelect: "none",
             }}
           >
             <Download size={14} />
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit" }}>Export</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit", textTransform: "uppercase", letterSpacing: 0.3 }}>Export</Typography>
           </Box>
           <Box
             onClick={onClose}
@@ -594,9 +591,7 @@ export default function LeadApprovalFrequencyModal({
                       >
                         {emp.name}
                       </Typography>
-                      <Box sx={{ flex: 1, height: 6, bgcolor: "action.hover", borderRadius: 3, overflow: "hidden" }}>
-                        <Box sx={{ width: `${(emp.count / maxEmpCount) * 100}%`, height: "100%", bgcolor: "#E8420A", borderRadius: 3 }} />
-                      </Box>
+                      <Box sx={{ flex: 1 }} />
                       <Typography sx={{ fontSize: 12, color: "text.disabled", minWidth: 76, textAlign: "right" }}>
                         {emp.count} {emp.count === 1 ? "claim" : "claims"}
                       </Typography>
