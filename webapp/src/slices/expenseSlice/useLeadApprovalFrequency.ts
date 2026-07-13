@@ -137,20 +137,52 @@ export function useLeadFrequencyList(dateRange: string, businessUnit: string) {
       .then((res) => {
         if (!cancelled) {
           const items = res.data ?? [];
-          setLeads(
-            items.map((l) => ({
-              ...l,
-              totalApproved: Number(l.totalApproved),
-              avgFrequencyPerDay:
-                Number(l.avgFrequencyPerDay) ||
-                computeFreq(
-                  Number(l.totalApproved),
-                  l.firstApprovedDate ?? "",
-                  l.lastApprovedDate ?? "",
-                ),
-              avgResponseDays: Number(l.avgResponseDays) || 0,
-            })),
-          );
+          const mapped = items.map((l) => ({
+            ...l,
+            totalApproved: Number(l.totalApproved),
+            avgFrequencyPerDay:
+              Number(l.avgFrequencyPerDay) ||
+              computeFreq(
+                Number(l.totalApproved),
+                l.firstApprovedDate ?? "",
+                l.lastApprovedDate ?? "",
+              ),
+            avgResponseDays: Number(l.avgResponseDays) || 0,
+          }));
+
+          // The backend groups by a trimmed/split lead_email, which can still yield
+          // multiple rows for the same lead (case/whitespace variance, multi-lead
+          // ordering). Merge those rows here so each lead appears once.
+          const deduped = new Map<string, LeadFrequencyItem>();
+          for (const l of mapped) {
+            const key = l.email.trim().toLowerCase();
+            const existing = deduped.get(key);
+            if (existing) {
+              const combinedApproved = existing.totalApproved + l.totalApproved;
+              existing.avgResponseDays =
+                combinedApproved > 0
+                  ? (existing.avgResponseDays * existing.totalApproved +
+                      l.avgResponseDays * l.totalApproved) /
+                    combinedApproved
+                  : 0;
+              existing.totalApproved = combinedApproved;
+              existing.firstApprovedDate = [existing.firstApprovedDate, l.firstApprovedDate]
+                .filter((d): d is string => !!d)
+                .sort()[0] ?? null;
+              existing.lastApprovedDate = [existing.lastApprovedDate, l.lastApprovedDate]
+                .filter((d): d is string => !!d)
+                .sort()
+                .pop() ?? null;
+              existing.avgFrequencyPerDay = computeFreq(
+                existing.totalApproved,
+                existing.firstApprovedDate ?? "",
+                existing.lastApprovedDate ?? "",
+              );
+            } else {
+              deduped.set(key, { ...l });
+            }
+          }
+          setLeads([...deduped.values()]);
         }
       })
       .catch((err) => {
