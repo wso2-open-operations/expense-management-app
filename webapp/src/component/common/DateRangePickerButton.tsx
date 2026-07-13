@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Box, Button, Popover, Typography } from "@wso2/oxygen-ui";
+import { Box, Button, Popover, Typography, useTheme } from "@wso2/oxygen-ui";
 import dayjs, { type Dayjs } from "dayjs";
 import { CalendarDays } from "lucide-react";
 import { useState } from "react";
@@ -26,20 +26,6 @@ interface DateRangePickerButtonProps {
   maxTo?: Dayjs;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: 140,
-  height: 34,
-  padding: "0 10px",
-  borderRadius: 6,
-  border: "1px solid #e5e7eb",
-  fontSize: 13,
-  fontFamily: "inherit",
-  color: "#ffffff",
-  outline: "none",
-  cursor: "pointer",
-  boxSizing: "border-box",
-};
-
 export default function DateRangePickerButton({
   fromDate,
   toDate,
@@ -49,6 +35,22 @@ export default function DateRangePickerButton({
 }: DateRangePickerButtonProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
+  const theme = useTheme();
+
+  const inputStyle: React.CSSProperties = {
+    width: 140,
+    height: 34,
+    padding: "0 10px",
+    borderRadius: 6,
+    border: `1px solid ${theme.palette.divider}`,
+    fontSize: 13,
+    fontFamily: "inherit",
+    color: theme.palette.text.primary,
+    colorScheme: theme.palette.mode,
+    outline: "none",
+    cursor: "pointer",
+    boxSizing: "border-box",
+  };
 
   const rangeLabel = `${fromDate.format("DD MMM YYYY")} – ${toDate.format("DD MMM YYYY")}`;
 
