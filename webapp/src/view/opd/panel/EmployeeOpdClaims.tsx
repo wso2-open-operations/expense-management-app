@@ -172,8 +172,8 @@ export default function EmployeeOpdClaims() {
             />
             <SummaryCard
               icon={FileText}
-              iconBg="#dbeafe"
-              iconColor="#2563eb"
+              iconBg="#FEF0EB"
+              iconColor="#E8420A"
               title="Number of Claims"
               chipLabel={String(currentYear)}
               value={String(claims.length)}
