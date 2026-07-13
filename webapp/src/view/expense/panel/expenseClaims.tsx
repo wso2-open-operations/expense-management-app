@@ -16,7 +16,7 @@
 import { Alert, Box, Button, Skeleton, Stack, Typography } from "@wso2/oxygen-ui";
 import dayjs from "dayjs";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import SummaryCard from "@component/card/SummaryCard";
 import BarChart from "@component/chart/BarChart";
@@ -29,8 +29,6 @@ import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import {
   DEFAULT_CURRENCY,
   EXPENSE_DATE_RANGE_TO_PERIOD,
-  EXPENSE_PERIOD_OPTIONS,
-  EXPENSE_PERIOD_TO_DATE_RANGE,
   OPD_SUMMARY_CARDS_CONFIG,
   PAGE_SIZE_RECURRING,
 } from "@config/constant";
@@ -48,8 +46,6 @@ import {
   formatWithSymbol,
 } from "@utils/currency";
 
-import { INITIAL_FILTERS } from "../data/mockData";
-import FilterPanel from "./FilterPanel";
 
 const prevMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString(
   "default",
@@ -70,7 +66,7 @@ function getDefaultPanelFromDate(): string {
 
 export default function ExpenseClaims() {
   const dispatch = useAppDispatch();
-  const { data, filters, loading, error, handleFiltersChange } = useExpenseClaims();
+  const { data, filters, loading, error } = useExpenseClaims();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [chartPeriod, setChartPeriod] = useState("annually");
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY as CurrencyCode);
@@ -78,20 +74,6 @@ export default function ExpenseClaims() {
   const [recurringPage, setRecurringPage] = useState(0);
   const [panelFromDate, setPanelFromDate] = useState(getDefaultPanelFromDate);
   const [panelToDate, setPanelToDate] = useState(getDefaultPanelToDate);
-  const [draftFilters, setDraftFilters] = useState(filters);
-
-  useEffect(() => {
-    setDraftFilters(filters);
-  }, [filters]);
-
-  const handleApplyFilters = useCallback(() => {
-    handleFiltersChange(draftFilters);
-  }, [draftFilters, handleFiltersChange]);
-
-  const handleClearFilters = useCallback(() => {
-    setDraftFilters(INITIAL_FILTERS);
-    handleFiltersChange(INITIAL_FILTERS);
-  }, [handleFiltersChange]);
 
   const fmt = (v: number) => formatCurrencyValue(v, currency);
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
@@ -165,17 +147,6 @@ export default function ExpenseClaims() {
   useEffect(() => {
     setChartPeriod(EXPENSE_DATE_RANGE_TO_PERIOD[filters.dateRange] ?? "annually");
   }, [filters.dateRange]);
-
-  const handlePeriodChange = useCallback(
-    (period: string) => {
-      setChartPeriod(period);
-      const newDateRange = EXPENSE_PERIOD_TO_DATE_RANGE[period];
-      if (newDateRange && newDateRange !== filters.dateRange) {
-        handleFiltersChange({ ...filters, dateRange: newDateRange });
-      }
-    },
-    [filters, handleFiltersChange],
-  );
 
   useEffect(() => {
     return () => {
@@ -287,86 +258,7 @@ export default function ExpenseClaims() {
         overflowX: "hidden",
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 1.5,
-          mb: 2,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 3.5 }}>
-          {EXPENSE_PERIOD_OPTIONS.map((option) => (
-            <Box
-              key={option.value}
-              onClick={() => handlePeriodChange(option.value)}
-              sx={{
-                pb: 1.25,
-                cursor: "pointer",
-                borderBottom: "2px solid",
-                borderColor: chartPeriod === option.value ? "primary.main" : "transparent",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: chartPeriod === option.value ? "primary.main" : "text.secondary",
-                }}
-              >
-                {option.label}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, pb: 1.25 }}>
-          <Button
-            variant="contained"
-            onClick={handleApplyFilters}
-            sx={{
-              textTransform: "none",
-              fontWeight: 700,
-              fontSize: 14,
-              px: 3,
-              py: 0.8,
-              borderRadius: 1,
-              background: "linear-gradient(135deg, #ff9d4d 0%, #e8420a 100%)",
-              boxShadow: "none",
-              "&:hover": {
-                background: "linear-gradient(135deg, #ff8a2e 0%, #d43a08 100%)",
-                boxShadow: "none",
-              },
-            }}
-          >
-            Apply
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleClearFilters}
-            sx={{
-              textTransform: "none",
-              fontWeight: 700,
-              fontSize: 14,
-              px: 3,
-              py: 0.8,
-              borderRadius: 1,
-              borderColor: "primary.main",
-              color: "primary.main",
-              "&:hover": { borderColor: "primary.dark", bgcolor: "action.hover" },
-            }}
-          >
-            Clear All
-          </Button>
-        </Box>
-      </Box>
-
       <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 1.5 }}>
-        <FilterPanel filters={draftFilters} onChange={setDraftFilters} />
         <CurrencySelector value={currency} onChange={setCurrency} />
       </Box>
 
