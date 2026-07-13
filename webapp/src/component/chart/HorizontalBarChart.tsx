@@ -50,10 +50,9 @@ export default function HorizontalBarChart({
 }: HorizontalBarChartProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
 
-  const defaultBarColor = isDark ? "#e3f2fd" : "#4A8EDB";
-  const defaultBarHoverColor = isDark ? "#bbdefb" : "#3672b5";
+  const defaultBarColor = theme.palette.primary.main;
+  const defaultBarHoverColor = theme.palette.primary.dark;
   const resolvedBarColor = barColor ?? defaultBarColor;
   const resolvedBarHoverColor = barHoverColor ?? defaultBarHoverColor;
 
