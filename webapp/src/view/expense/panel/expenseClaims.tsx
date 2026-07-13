@@ -21,19 +21,18 @@ import { useCallback, useEffect, useState } from "react";
 import SummaryCard from "@component/card/SummaryCard";
 import BarChart from "@component/chart/BarChart";
 import ChartCard from "@component/chart/ChartCard";
-import ChartPeriodFilter from "@component/chart/ChartPeriodFilter";
 import DoughnutChart from "@component/chart/DoughnutChart";
 import EmployeeSpendingBreakdownPanel from "@component/chart/EmployeeSpendingBreakdownPanel";
 import LeadApprovalFrequencyPanel from "@component/chart/LeadApprovalFrequencyPanel";
 import CurrencySelector from "@component/common/CurrencySelector";
 import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import {
-  DATE_RANGE_TO_PERIOD,
   DEFAULT_CURRENCY,
-  MONTH_OPTIONS,
+  EXPENSE_DATE_RANGE_TO_PERIOD,
+  EXPENSE_PERIOD_OPTIONS,
+  EXPENSE_PERIOD_TO_DATE_RANGE,
   OPD_SUMMARY_CARDS_CONFIG,
   PAGE_SIZE_RECURRING,
-  PERIOD_TO_DATE_RANGE,
 } from "@config/constant";
 import PaginationBar from "@component/common/PaginationBar";
 import {
@@ -49,6 +48,7 @@ import {
   formatWithSymbol,
 } from "@utils/currency";
 
+import { INITIAL_FILTERS } from "../data/mockData";
 import FilterPanel from "./FilterPanel";
 
 const prevMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString(
@@ -65,21 +65,33 @@ function getDefaultPanelToDate(): string {
 }
 
 function getDefaultPanelFromDate(): string {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  return "2022-01-01";
 }
 
 export default function ExpenseClaims() {
   const dispatch = useAppDispatch();
   const { data, filters, loading, error, handleFiltersChange } = useExpenseClaims();
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [chartPeriod, setChartPeriod] = useState("all");
+  const [chartPeriod, setChartPeriod] = useState("annually");
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY as CurrencyCode);
   const [selectedRecurringCategory, setSelectedRecurringCategory] = useState<string | null>(null);
   const [recurringPage, setRecurringPage] = useState(0);
   const [panelFromDate, setPanelFromDate] = useState(getDefaultPanelFromDate);
   const [panelToDate, setPanelToDate] = useState(getDefaultPanelToDate);
+  const [draftFilters, setDraftFilters] = useState(filters);
+
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
+
+  const handleApplyFilters = useCallback(() => {
+    handleFiltersChange(draftFilters);
+  }, [draftFilters, handleFiltersChange]);
+
+  const handleClearFilters = useCallback(() => {
+    setDraftFilters(INITIAL_FILTERS);
+    handleFiltersChange(INITIAL_FILTERS);
+  }, [handleFiltersChange]);
 
   const fmt = (v: number) => formatCurrencyValue(v, currency);
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
@@ -151,13 +163,13 @@ export default function ExpenseClaims() {
   );
 
   useEffect(() => {
-    setChartPeriod(DATE_RANGE_TO_PERIOD[filters.dateRange] ?? "pastTwelve");
+    setChartPeriod(EXPENSE_DATE_RANGE_TO_PERIOD[filters.dateRange] ?? "annually");
   }, [filters.dateRange]);
 
   const handlePeriodChange = useCallback(
     (period: string) => {
       setChartPeriod(period);
-      const newDateRange = PERIOD_TO_DATE_RANGE[period];
+      const newDateRange = EXPENSE_PERIOD_TO_DATE_RANGE[period];
       if (newDateRange && newDateRange !== filters.dateRange) {
         handleFiltersChange({ ...filters, dateRange: newDateRange });
       }
@@ -275,8 +287,86 @@ export default function ExpenseClaims() {
         overflowX: "hidden",
       }}
     >
-      <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <FilterPanel filters={filters} onFiltersChange={handleFiltersChange} />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 1.5,
+          mb: 2,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 3.5 }}>
+          {EXPENSE_PERIOD_OPTIONS.map((option) => (
+            <Box
+              key={option.value}
+              onClick={() => handlePeriodChange(option.value)}
+              sx={{
+                pb: 1.25,
+                cursor: "pointer",
+                borderBottom: "2px solid",
+                borderColor: chartPeriod === option.value ? "primary.main" : "transparent",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: chartPeriod === option.value ? "primary.main" : "text.secondary",
+                }}
+              >
+                {option.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, pb: 1.25 }}>
+          <Button
+            variant="contained"
+            onClick={handleApplyFilters}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: 14,
+              px: 3,
+              py: 0.8,
+              borderRadius: 1,
+              background: "linear-gradient(135deg, #ff9d4d 0%, #e8420a 100%)",
+              boxShadow: "none",
+              "&:hover": {
+                background: "linear-gradient(135deg, #ff8a2e 0%, #d43a08 100%)",
+                boxShadow: "none",
+              },
+            }}
+          >
+            Apply
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleClearFilters}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: 14,
+              px: 3,
+              py: 0.8,
+              borderRadius: 1,
+              borderColor: "primary.main",
+              color: "primary.main",
+              "&:hover": { borderColor: "primary.dark", bgcolor: "action.hover" },
+            }}
+          >
+            Clear All
+          </Button>
+        </Box>
+      </Box>
+
+      <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 1.5 }}>
+        <FilterPanel filters={draftFilters} onChange={setDraftFilters} />
         <CurrencySelector value={currency} onChange={setCurrency} />
       </Box>
 
@@ -338,13 +428,6 @@ export default function ExpenseClaims() {
         <ChartCard
           title="Expense from BU"
           subtitle="Total expense amount by Business Unit"
-          action={
-            <ChartPeriodFilter
-              value={chartPeriod}
-              options={MONTH_OPTIONS}
-              onChange={handlePeriodChange}
-            />
-          }
         >
           <BarChart
             data={buExpenses.map((d) => ({ label: d.label, value: d.value }))}
@@ -358,13 +441,6 @@ export default function ExpenseClaims() {
         <ChartCard
           title="Active Claim Stats"
           subtitle="Claim counts by status"
-          action={
-            <ChartPeriodFilter
-              value={chartPeriod}
-              options={MONTH_OPTIONS}
-              onChange={handlePeriodChange}
-            />
-          }
         >
           <BarChart
             data={claimStats.map((d) => ({ label: d.label, value: d.value }))}
