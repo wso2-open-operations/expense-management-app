@@ -120,8 +120,8 @@ export default function EmployeeCardClaims() {
             />
             <SummaryCard
               icon={FileText}
-              iconBg="#dbeafe"
-              iconColor="#2563eb"
+              iconBg="#FEF0EB"
+              iconColor="#E8420A"
               title="Transactions in"
               chipLabel={String(currentYear)}
               value={String(txnCount)}
