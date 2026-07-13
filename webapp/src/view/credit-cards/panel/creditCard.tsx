@@ -159,8 +159,8 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
             />
             <SummaryCard
               icon={DollarSign}
-              iconBg="#e0f2fe"
-              iconColor="#0ea5e9"
+              iconBg="#fff3e0"
+              iconColor="#f57c00"
               title="Avg Transaction"
               chipLabel={currentMonth}
               value={fmtSym(summary?.avgTransaction ?? 0)}
@@ -170,8 +170,8 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
             />
             <SummaryCard
               icon={Hash}
-              iconBg="#f3e8ff"
-              iconColor="#9333ea"
+              iconBg="#FEF0EB"
+              iconColor="#E8420A"
               title="Active Cards"
               chipLabel={String(currentYear)}
               value={String(summary?.activeCardCount ?? 0)}
