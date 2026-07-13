@@ -152,9 +152,14 @@ export default function CCCardDetailsModal({
               </Box>
             </Box>
             {breakdown && (
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.3 }}>
-                Total: {fmtSym(breakdown.totalAmount)} · {breakdown.txnCount} transactions
-              </Typography>
+              <>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
+                  Total: {fmtSym(breakdown.totalAmount)}
+                </Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#9E9E9E" }}>
+                  No of Transactions: {breakdown.txnCount}
+                </Typography>
+              </>
             )}
           </Box>
         </Box>
@@ -166,16 +171,16 @@ export default function CCCardDetailsModal({
               display: "flex", alignItems: "center", gap: 0.6,
               cursor: breakdown ? "pointer" : "not-allowed",
               opacity: breakdown ? 1 : 0.5,
-              px: 1.5, py: 0.55, borderRadius: "20px",
-              border: "1.5px solid", borderColor: "warning.main",
-              color: "warning.main", fontWeight: 700, fontSize: 13,
+              px: 2, py: 0.7, borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "#fff", fontWeight: 700, fontSize: 13,
               transition: "all 0.15s ease",
-              "&:hover": breakdown ? { bgcolor: "warning.main", color: "#fff" } : {},
+              "&:hover": breakdown ? { bgcolor: "primary.dark" } : {},
               userSelect: "none",
             }}
           >
             <Download size={14} />
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit" }}>Export</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit", textTransform: "uppercase", letterSpacing: 0.3 }}>Export</Typography>
           </Box>
           <Box onClick={onClose} sx={{ cursor: "pointer", color: "text.secondary", p: 0.5, borderRadius: 1, "&:hover": { bgcolor: "action.hover", color: "text.primary" } }}>
             <X size={20} />
