@@ -14,11 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, CircularProgress, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
-import dayjs from "dayjs";
 import { ChevronDown, ChevronRight, Download, X } from "lucide-react";
 // Skeleton, TrendingDown, TrendingUp were used by PeriodComparison, which is commented out below
-
-import DateRangePickerButton from "@component/common/DateRangePickerButton";
 
 import { useEffect, useState } from "react";
 
@@ -32,21 +29,54 @@ import { apiService } from "@utils/apiService";
 import { type CurrencyCode, CURRENCIES, formatWithSymbol } from "@utils/currency";
 import { exportEmployeeBreakdown } from "@utils/exportExcel";
 
-function formatMonthLabel(ym: string): string {
-  const [y, m] = ym.slice(0, 7).split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-}
+const PERIOD_GRANULARITIES = ["Annually", "Quarterly", "Monthly"] as const;
+type PeriodGranularity = (typeof PERIOD_GRANULARITIES)[number];
 
-function getDefaultCompDate(): string {
+const PERIOD_COLUMN_COUNT = 5;
+
+// Builds N fixed calendar periods (oldest first) for the chosen granularity, e.g.
+// Annually -> last 5 calendar years, Quarterly -> last 5 quarters, Monthly -> last 5 months.
+function generatePeriodColumns(
+  granularity: PeriodGranularity,
+): { label: string; dateRange: string }[] {
   const now = new Date();
-  const pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, "0")}-01`;
+  const columns: { label: string; dateRange: string }[] = [];
+
+  if (granularity === "Annually") {
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const year = now.getFullYear() - i;
+      columns.push({ label: String(year), dateRange: `custom:${year}-1:${year}-12` });
+    }
+  } else if (granularity === "Quarterly") {
+    const currentAbsQuarter = now.getFullYear() * 4 + Math.floor(now.getMonth() / 3);
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const absQuarter = currentAbsQuarter - i;
+      const year = Math.floor(absQuarter / 4);
+      const q = absQuarter % 4;
+      const startMonth = q * 3 + 1;
+      const endMonth = q * 3 + 3;
+      columns.push({
+        label: `Q${q + 1} ${year}`,
+        dateRange: `custom:${year}-${startMonth}:${year}-${endMonth}`,
+      });
+    }
+  } else {
+    for (let i = PERIOD_COLUMN_COUNT - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      columns.push({
+        label: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        dateRange: `custom:${year}-${month}:${year}-${month}`,
+      });
+    }
+  }
+
+  return columns;
 }
 
 const SEGMENT_COLORS = [
-  "#00B4D8",
   "#FF8A4C",
-  "#F4B400",
   "#2E8B57",
   "#AB7AE0",
   "#8C9EFF",
@@ -68,7 +98,6 @@ interface SubCategoryPanelProps {
   email: string;
   category: string;
   dateRange: string;
-  compDateRange: string;
   fmtSym: (v: number) => string;
   color: string;
   statusFilter: string;
@@ -78,31 +107,21 @@ function SubCategoryPanel({
   email,
   category,
   dateRange,
-  compDateRange,
   fmtSym,
   color,
   statusFilter,
 }: SubCategoryPanelProps) {
-  const { transactions: curTxns, loading: curLoading } = useEmployeeCategoryTransactions(
+  const { transactions: txns, loading } = useEmployeeCategoryTransactions(
     email,
     category,
     dateRange,
     statusFilter,
   );
-  const { transactions: cmpTxns, loading: cmpLoading } = useEmployeeCategoryTransactions(
-    email,
-    category,
-    compDateRange,
-    statusFilter,
-  );
 
-  const curMap = new Map<string, number>();
-  curTxns.forEach((t) => curMap.set(t.description, (curMap.get(t.description) ?? 0) + t.amount));
+  const amountMap = new Map<string, number>();
+  txns.forEach((t) => amountMap.set(t.description, (amountMap.get(t.description) ?? 0) + t.amount));
 
-  const cmpMap = new Map<string, number>();
-  cmpTxns.forEach((t) => cmpMap.set(t.description, (cmpMap.get(t.description) ?? 0) + t.amount));
-
-  const allSubs = [...new Set([...curMap.keys(), ...cmpMap.keys()])].sort();
+  const allSubs = [...amountMap.keys()].sort();
 
   return (
     <Box
@@ -116,7 +135,7 @@ function SubCategoryPanel({
         overflow: "hidden",
       }}
     >
-      {curLoading || cmpLoading ? (
+      {loading ? (
         <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
           <CircularProgress size={20} />
         </Box>
@@ -128,8 +147,7 @@ function SubCategoryPanel({
         </Box>
       ) : (
         allSubs.map((sub, idx) => {
-          const cur = curMap.get(sub) ?? 0;
-          const cmp = cmpMap.get(sub) ?? 0;
+          const amount = amountMap.get(sub) ?? 0;
           return (
             <Box
               key={sub}
@@ -163,26 +181,14 @@ function SubCategoryPanel({
               <Typography
                 sx={{
                   fontSize: 12,
-                  fontWeight: 600,
-                  color: cmp > 0 ? "text.secondary" : "text.disabled",
-                  minWidth: 110,
-                  textAlign: "right",
-                  flexShrink: 0,
-                }}
-              >
-                {cmp > 0 ? fmtSym(cmp) : "—"}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 12,
                   fontWeight: 700,
-                  color: cur > 0 ? "text.primary" : "text.disabled",
+                  color: amount > 0 ? "text.primary" : "text.disabled",
                   minWidth: 110,
                   textAlign: "right",
                   flexShrink: 0,
                 }}
               >
-                {cur > 0 ? fmtSym(cur) : "—"}
+                {amount > 0 ? fmtSym(amount) : ""}
               </Typography>
             </Box>
           );
@@ -192,52 +198,40 @@ function SubCategoryPanel({
   );
 }
 
-interface CategoryRowProps {
+interface CategoryTableRowProps {
   category: string;
-  total: number;
-  claimCount: number;
-  percentage: number;
   color: string;
-  maxTotal: number;
-  compTotal: number;
-  maxCompTotal: number;
+  values: number[];
+  columnCount: number;
   email: string;
-  dateRange: string;
-  compDateRange: string;
+  latestDateRange: string;
   fmtSym: (v: number) => string;
   isExpanded: boolean;
   onToggle: () => void;
   statusFilter: string;
 }
 
-function CategoryRow({
+function CategoryTableRow({
   category,
-  total,
-  claimCount,
-  percentage,
   color,
-  maxTotal,
-  compTotal,
-  maxCompTotal,
+  values,
+  columnCount,
   email,
-  dateRange,
-  compDateRange,
+  latestDateRange,
   fmtSym,
   isExpanded,
   onToggle,
   statusFilter,
-}: CategoryRowProps) {
-  const curBarW = maxTotal > 0 ? Math.min(100, (total / maxTotal) * 100) : 0;
-  const cmpBarW = maxCompTotal > 0 ? Math.min(100, (compTotal / maxCompTotal) * 100) : 0;
-
+}: CategoryTableRowProps) {
   return (
     <Box>
       <Box
         onClick={onToggle}
         sx={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: `170px repeat(${columnCount}, 1fr)`,
           alignItems: "center",
-          gap: 1.5,
+          columnGap: 1.5,
           px: 1.5,
           py: 1.2,
           borderRadius: 1.5,
@@ -250,83 +244,46 @@ function CategoryRow({
           mb: 0.5,
         }}
       >
-        <Box sx={{ color: "text.secondary", display: "flex", alignItems: "center" }}>
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </Box>
-
-        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
-
-        <Typography
-          sx={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "text.primary",
-            width: 132,
-            maxWidth: 130,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-          title={category}
-        >
-          {category}
-        </Typography>
-
-        <Box sx={{ flex: 1, mx: 1.5, position: "relative", height: 10 }}>
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              bgcolor: "action.hover",
-              borderRadius: 5,
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: `${cmpBarW}%`,
-              bgcolor: color,
-              opacity: 0.3,
-              borderRadius: 5,
-              transition: "width 0.4s ease",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              top: 2,
-              bottom: 2,
-              left: 0,
-              width: `${curBarW}%`,
-              bgcolor: color,
-              borderRadius: 5,
-              transition: "width 0.4s ease",
-            }}
-          />
-        </Box>
-
-        <Box sx={{ display: "flex", gap: 2, flexShrink: 0 }}>
-          <Box sx={{ textAlign: "right", minWidth: 110 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>
-              {fmtSym(total)}
-            </Typography>
-            <Typography sx={{ fontSize: 11, color: "#9E9E9E" }}>
-              {claimCount} claims • {percentage.toFixed(1)}%
-            </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+          <Box sx={{ color: "text.secondary", display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </Box>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "text.primary",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={category}
+          >
+            {category}
+          </Typography>
         </Box>
+
+        {values.map((value, idx) => (
+          <Typography
+            key={idx}
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: value > 0 ? "text.primary" : "text.disabled",
+              textAlign: "right",
+            }}
+          >
+            {value > 0 ? fmtSym(value) : ""}
+          </Typography>
+        ))}
       </Box>
 
       {isExpanded && (
         <SubCategoryPanel
           email={email}
           category={category}
-          dateRange={dateRange}
-          compDateRange={compDateRange}
+          dateRange={latestDateRange}
           fmtSym={fmtSym}
           color={color}
           statusFilter={statusFilter}
@@ -512,45 +469,29 @@ export default function EmployeeBreakdownModal({
 }: EmployeeBreakdownModalProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>("All");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [compFromDate, setCompFromDate] = useState(getDefaultCompDate);
-  const [compToDate, setCompToDate] = useState(getDefaultCompDate);
+  const [periodGranularity, setPeriodGranularity] = useState<PeriodGranularity>("Annually");
   const [exportLoading, setExportLoading] = useState(false);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
+  const statusFilter = statusTab === "All" ? "" : statusTab;
 
-  const { breakdown, loading } = useEmployeeBreakdown(
-    open ? employeeEmail : null,
-    dateRange,
-    statusTab === "All" ? "" : statusTab,
-  );
+  const { breakdown, loading } = useEmployeeBreakdown(open ? employeeEmail : null, dateRange, statusFilter);
 
-  
-const currentYearMonth = new Date().toISOString().slice(0, 7);
-const safeFrom = compFromDate || currentYearMonth;
-const safeTo = compToDate || safeFrom;
+  const periodColumns = generatePeriodColumns(periodGranularity);
 
-
-const standardFrom = safeFrom > safeTo ? safeTo : safeFrom;
-const standardTo = safeFrom > safeTo ? safeFrom : safeTo;
-
-
-const compDateRange = `custom:${standardFrom}:${standardTo}`;
-const compLabel = standardFrom === standardTo
-  ? formatMonthLabel(standardFrom)
-  : `${formatMonthLabel(standardFrom)} – ${formatMonthLabel(standardTo)}`;
-
-  const { breakdown: compBreakdown } = useEmployeeBreakdown(
-    open ? employeeEmail : null,
-    compDateRange,
-    statusTab === "All" ? "" : statusTab,
-  );
+  // Rules-of-hooks safe: PERIOD_COLUMN_COUNT is a fixed constant, so this is always 5 calls.
+  const period0 = useEmployeeBreakdown(open ? employeeEmail : null, periodColumns[0].dateRange, statusFilter);
+  const period1 = useEmployeeBreakdown(open ? employeeEmail : null, periodColumns[1].dateRange, statusFilter);
+  const period2 = useEmployeeBreakdown(open ? employeeEmail : null, periodColumns[2].dateRange, statusFilter);
+  const period3 = useEmployeeBreakdown(open ? employeeEmail : null, periodColumns[3].dateRange, statusFilter);
+  const period4 = useEmployeeBreakdown(open ? employeeEmail : null, periodColumns[4].dateRange, statusFilter);
+  const periodBreakdowns = [period0, period1, period2, period3, period4];
 
   useEffect(() => {
     if (open) {
       setStatusTab("All");
       setExpandedCategory(null);
-      setCompFromDate(getDefaultCompDate());
-      setCompToDate(getDefaultCompDate());
+      setPeriodGranularity("Annually");
     }
   }, [open, employeeEmail]);
 
@@ -558,34 +499,39 @@ const compLabel = standardFrom === standardTo
     setExpandedCategory(null);
   }, [statusTab]);
 
-  const maxCurrent = breakdown ? Math.max(...breakdown.categories.map((c) => c.total), 1) : 1;
-  const maxComp = compBreakdown ? Math.max(...compBreakdown.categories.map((c) => c.total), 1) : 1;
-  const compMap = new Map((compBreakdown?.categories ?? []).map((c) => [c.category, c]));
+  const periodCategoryMaps = periodBreakdowns.map(
+    (p) => new Map((p.breakdown?.categories ?? []).map((c) => [c.category, c])),
+  );
+  const latestCategoryMap = periodCategoryMaps[periodCategoryMaps.length - 1];
+  const allCategories = [...new Set(periodCategoryMaps.flatMap((m) => [...m.keys()]))].sort(
+    (a, b) => (latestCategoryMap.get(b)?.total ?? 0) - (latestCategoryMap.get(a)?.total ?? 0),
+  );
+  const anyPeriodLoading = periodBreakdowns.some((p) => p.loading);
 
   const handleExport = async () => {
     if (!breakdown || !employeeEmail) return;
     setExportLoading(true);
 
-    const curParams = resolveDateRangeParams(dateRange);
-    const cmpParams = resolveDateRangeParams(compDateRange);
+    const latestDateRange = periodColumns[periodColumns.length - 1].dateRange;
+    const latestParams = resolveDateRangeParams(latestDateRange);
     const statusParam = statusTab === "All" ? undefined : statusTab;
 
-    const fetchSubs = (params: typeof curParams) =>
+    const fetchSubs = () =>
       Promise.all(
-        breakdown.categories.map((cat) =>
+        allCategories.map((category) =>
           apiService
             .get<EmployeeCategoryTransactionItem[]>("/employee-category-transactions", {
               params: {
                 email: employeeEmail,
-                category: cat.category,
-                year: params.year,
-                month: params.month,
-                monthRange: params.monthRange,
+                category,
+                year: latestParams.year,
+                month: latestParams.month,
+                monthRange: latestParams.monthRange,
                 ...(statusParam ? { statusFilter: statusParam } : {}),
               },
             })
-            .then((r) => ({ category: cat.category, txns: r.data ?? [] }))
-            .catch(() => ({ category: cat.category, txns: [] as EmployeeCategoryTransactionItem[] })),
+            .then((r) => ({ category, txns: r.data ?? [] }))
+            .catch(() => ({ category, txns: [] as EmployeeCategoryTransactionItem[] })),
         ),
       );
 
@@ -596,9 +542,8 @@ const compLabel = standardFrom === standardTo
     };
 
     try {
-      const [curResults, cmpResults] = await Promise.all([fetchSubs(curParams), fetchSubs(cmpParams)]);
-      const curSubMaps = new Map(curResults.map((r) => [r.category, buildSubMap(r.txns)]));
-      const cmpSubMaps = new Map(cmpResults.map((r) => [r.category, buildSubMap(r.txns)]));
+      const subResults = await fetchSubs();
+      const subMaps = new Map(subResults.map((r) => [r.category, buildSubMap(r.txns)]));
 
       exportEmployeeBreakdown({
         name: employeeName,
@@ -606,27 +551,23 @@ const compLabel = standardFrom === standardTo
         dateRange,
         statusTab,
         currency: CURRENCIES[currency].code,
-        totalAmount: breakdown.totalAmount,
-        claimCount: breakdown.claimCount,
-        compLabel,
-        prevTotalAmount: compBreakdown?.totalAmount ?? 0,
-        prevClaimCount: compBreakdown?.claimCount ?? 0,
-        categories: breakdown.categories.map((cat) => {
-          const cmp = compMap.get(cat.category);
-          const curSubMap = curSubMaps.get(cat.category) ?? new Map<string, number>();
-          const cmpSubMap = cmpSubMaps.get(cat.category) ?? new Map<string, number>();
-          const allSubNames = [...new Set([...curSubMap.keys(), ...cmpSubMap.keys()])].sort();
+        periodLabels: periodColumns.map((c) => c.label),
+        periodTotals: periodBreakdowns.map((p) => ({
+          totalAmount: p.breakdown?.totalAmount ?? 0,
+          claimCount: p.breakdown?.claimCount ?? 0,
+        })),
+        categories: allCategories.map((category) => {
+          const subMap = subMaps.get(category) ?? new Map<string, number>();
           return {
-            category: cat.category,
-            total: cat.total,
-            claimCount: cat.claimCount,
-            percentage: cat.percentage,
-            compTotal: cmp?.total ?? 0,
-            compClaimCount: cmp?.claimCount ?? 0,
-            subCategories: allSubNames.map((name) => ({
+            category,
+            percentage: latestCategoryMap.get(category)?.percentage ?? 0,
+            values: periodCategoryMaps.map((m) => ({
+              total: m.get(category)?.total ?? 0,
+              claimCount: m.get(category)?.claimCount ?? 0,
+            })),
+            subCategories: [...subMap.keys()].sort().map((name) => ({
               name,
-              currentTotal: curSubMap.get(name) ?? 0,
-              compTotal: cmpSubMap.get(name) ?? 0,
+              total: subMap.get(name) ?? 0,
             })),
           };
         }),
@@ -691,21 +632,28 @@ const compLabel = standardFrom === standardTo
               gap: 0.6,
               cursor: breakdown && !exportLoading ? "pointer" : "not-allowed",
               opacity: breakdown && !exportLoading ? 1 : 0.5,
-              px: 1.5,
-              py: 0.55,
-              borderRadius: "20px",
-              border: "1.5px solid",
-              borderColor: "warning.main",
-              color: "warning.main",
+              px: 2,
+              py: 0.7,
+              borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "#fff",
               fontWeight: 700,
               fontSize: 13,
               transition: "all 0.15s ease",
-              "&:hover": breakdown && !exportLoading ? { bgcolor: "warning.main", color: "#fff" } : {},
+              "&:hover": breakdown && !exportLoading ? { bgcolor: "primary.dark" } : {},
               userSelect: "none",
             }}
           >
             {exportLoading ? <CircularProgress size={14} color="inherit" /> : <Download size={14} />}
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit" }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "inherit",
+                textTransform: "uppercase",
+                letterSpacing: 0.3,
+              }}
+            >
               {exportLoading ? "Exporting..." : "Export"}
             </Typography>
           </Box>
@@ -729,22 +677,39 @@ const compLabel = standardFrom === standardTo
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1,
-            mb: 1,
+            gap: 3,
+            mb: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary" }}>
-            Expense breakdown by type
-          </Typography>
-          <DateRangePickerButton
-            fromDate={dayjs(compFromDate)}
-            toDate={dayjs(compToDate)}
-            onFromChange={(d) => setCompFromDate(d.format("YYYY-MM-DD"))}
-            onToChange={(d) => setCompToDate(d.format("YYYY-MM-DD"))}
-            maxTo={dayjs()}
-          />
+          {PERIOD_GRANULARITIES.map((granularity) => (
+            <Box
+              key={granularity}
+              onClick={() => setPeriodGranularity(granularity)}
+              sx={{
+                pb: 1,
+                cursor: "pointer",
+                borderBottom: "2px solid",
+                borderColor: periodGranularity === granularity ? "primary.main" : "transparent",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: periodGranularity === granularity ? "primary.main" : "text.secondary",
+                }}
+              >
+                {granularity}
+              </Typography>
+            </Box>
+          ))}
         </Box>
+
+        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1 }}>
+          Expense breakdown by type
+        </Typography>
 
         <Box
           sx={{
@@ -779,7 +744,7 @@ const compLabel = standardFrom === standardTo
           ))}
         </Box>
 
-        {loading ? (
+        {loading || anyPeriodLoading ? (
           <Box
             sx={{
               display: "flex",
@@ -797,17 +762,7 @@ const compLabel = standardFrom === standardTo
           </Box>
         ) : (
           <>
-            {/* <PeriodComparison
-              currentBreakdown={breakdown}
-              prevBreakdown={compBreakdown}
-              loadingCurrent={false}
-              loadingPrev={loadingComp}
-              fmtSym={fmtSym}
-              dateRange={dateRange}
-              compLabel={compLabel}
-            /> */}
-
-            {!breakdown || breakdown.categories.length === 0 ? (
+            {allCategories.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 6 }}>
                 <Typography sx={{ color: "text.disabled", fontSize: 14 }}>
                   No expense data found for this period
@@ -817,30 +772,32 @@ const compLabel = standardFrom === standardTo
               <>
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    pl: 1.5,
-                    pr: 2,
+                    display: "grid",
+                    gridTemplateColumns: `170px repeat(${periodColumns.length}, 1fr)`,
+                    columnGap: 1.5,
+                    px: 1.5,
                     pb: 0.5,
-                    gap: 1.5,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    mb: 0.5,
                   }}
                 >
-                  <Box sx={{ flex: 1 }} />
-                  <Box sx={{ display: "flex", gap: 2, flexShrink: 0, alignItems: "center" }}>
+                  <Box />
+                  {periodColumns.map((col) => (
                     <Typography
+                      key={col.label}
                       sx={{
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 13,
+                        fontWeight: 800,
                         color: "text.disabled",
                         textTransform: "uppercase",
                         letterSpacing: 0.5,
-                        minWidth: 110,
                         textAlign: "right",
                       }}
                     >
-                      This Period
+                      {col.label}
                     </Typography>
-                  </Box>
+                  ))}
                 </Box>
                 <Box
                   sx={{
@@ -852,33 +809,48 @@ const compLabel = standardFrom === standardTo
                     "&::-webkit-scrollbar-thumb": { bgcolor: "text.disabled", borderRadius: 2 },
                   }}
                 >
-                  {breakdown.categories.map((cat, i) => {
-                    const cmp = compMap.get(cat.category);
-                    return (
-                      <CategoryRow
-                        key={cat.category}
-                        category={cat.category}
-                        total={cat.total}
-                        claimCount={cat.claimCount}
-                        percentage={cat.percentage}
-                        color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
-                        maxTotal={maxCurrent}
-                        compTotal={cmp?.total ?? 0}
-                        maxCompTotal={maxComp}
-                        email={employeeEmail ?? ""}
-                        dateRange={dateRange}
-                        compDateRange={compDateRange}
-                        fmtSym={fmtSym}
-                        isExpanded={expandedCategory === cat.category}
-                        onToggle={() =>
-                          setExpandedCategory((prev) =>
-                            prev === cat.category ? null : cat.category,
-                          )
-                        }
-                        statusFilter={statusTab}
-                      />
-                    );
-                  })}
+                  {allCategories.map((catKey, i) => (
+                    <CategoryTableRow
+                      key={catKey}
+                      category={catKey}
+                      color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
+                      values={periodCategoryMaps.map((m) => m.get(catKey)?.total ?? 0)}
+                      columnCount={periodColumns.length}
+                      email={employeeEmail ?? ""}
+                      latestDateRange={periodColumns[periodColumns.length - 1].dateRange}
+                      fmtSym={fmtSym}
+                      isExpanded={expandedCategory === catKey}
+                      onToggle={() =>
+                        setExpandedCategory((prev) => (prev === catKey ? null : catKey))
+                      }
+                      statusFilter={statusTab}
+                    />
+                  ))}
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: `170px repeat(${periodColumns.length}, 1fr)`,
+                      columnGap: 1.5,
+                      alignItems: "center",
+                      px: 1.5,
+                      py: 1.2,
+                      mt: 0.5,
+                      borderTop: "2px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                      Total
+                    </Typography>
+                    {periodBreakdowns.map((p, idx) => (
+                      <Typography
+                        key={idx}
+                        sx={{ fontSize: 13, fontWeight: 800, color: "text.primary", textAlign: "right" }}
+                      >
+                        {fmtSym(p.breakdown?.totalAmount ?? 0)}
+                      </Typography>
+                    ))}
+                  </Box>
                 </Box>
               </>
             )}
