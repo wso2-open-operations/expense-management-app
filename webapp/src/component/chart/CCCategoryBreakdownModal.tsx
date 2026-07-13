@@ -102,20 +102,19 @@ export default function CCCategoryBreakdownModal({
               display: "flex", alignItems: "center", gap: 0.6,
               cursor: employees.length > 0 ? "pointer" : "not-allowed",
               opacity: employees.length > 0 ? 1 : 0.5,
-              px: 1.5, py: 0.55,
-              borderRadius: "20px",
-              border: "1.5px solid",
-              borderColor: "warning.main",
-              color: "warning.main",
+              px: 2, py: 0.7,
+              borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "#fff",
               fontWeight: 700,
               fontSize: 13,
               transition: "all 0.15s ease",
-              "&:hover": employees.length > 0 ? { bgcolor: "warning.main", color: "#fff" } : {},
+              "&:hover": employees.length > 0 ? { bgcolor: "primary.dark" } : {},
               userSelect: "none",
             }}
           >
             <Download size={14} />
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit" }}>Export</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "inherit", textTransform: "uppercase", letterSpacing: 0.3 }}>Export</Typography>
           </Box>
           <Box
             onClick={onClose}
