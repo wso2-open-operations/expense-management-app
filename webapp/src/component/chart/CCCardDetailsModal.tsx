@@ -156,7 +156,7 @@ export default function CCCardDetailsModal({
                 <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
                   Total: {fmtSym(breakdown.totalAmount)}
                 </Typography>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#9E9E9E" }}>
+                <Typography sx={{ fontSize: 11, color: "text.disabled", mt: 0.2 }}>
                   No of Transactions: {breakdown.txnCount}
                 </Typography>
               </>
