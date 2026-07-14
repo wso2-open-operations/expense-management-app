@@ -475,7 +475,7 @@ export default function EmployeeBreakdownModal({
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
   const statusFilter = statusTab === "All" ? "" : statusTab;
 
-  const { breakdown, loading } = useEmployeeBreakdown(open ? employeeEmail : null, dateRange, statusFilter);
+  const { breakdown } = useEmployeeBreakdown(open ? employeeEmail : null, dateRange, statusFilter);
 
   const periodColumns = generatePeriodColumns(periodGranularity);
 
@@ -744,7 +744,7 @@ export default function EmployeeBreakdownModal({
           ))}
         </Box>
 
-        {loading || anyPeriodLoading ? (
+        {anyPeriodLoading ? (
           <Box
             sx={{
               display: "flex",
