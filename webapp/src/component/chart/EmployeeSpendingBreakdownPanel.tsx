@@ -14,13 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, Skeleton, Typography } from "@wso2/oxygen-ui";
-import dayjs, { type Dayjs } from "dayjs";
 
 import { useState, useMemo, useEffect } from "react";
 
 import ChartCard from "@component/chart/ChartCard";
 import EmployeeBreakdownModal from "@component/chart/EmployeeBreakdownModal";
-import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import PaginationBar from "@component/common/PaginationBar";
 import SearchBox from "@component/common/SearchBox";
 import { PAGE_SIZE_EMPLOYEES } from "@config/constant";
@@ -34,20 +32,12 @@ interface EmployeeSpendingBreakdownPanelProps {
   dateRange: string;
   businessUnit: string;
   currency: CurrencyCode;
-  rangeFromDate: string;
-  rangeToDate: string;
-  onRangeFromChange: (d: Dayjs) => void;
-  onRangeToChange: (d: Dayjs) => void;
 }
 
 export default function EmployeeSpendingBreakdownPanel({
   dateRange,
   businessUnit,
   currency,
-  rangeFromDate,
-  rangeToDate,
-  onRangeFromChange,
-  onRangeToChange,
 }: EmployeeSpendingBreakdownPanelProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -82,15 +72,6 @@ export default function EmployeeSpendingBreakdownPanel({
         title="Employee Spending Breakdown"
         subtitle="Employees with highest spending"
         minHeight={420}
-        action={
-          <DateRangePickerButton
-            fromDate={dayjs(rangeFromDate)}
-            toDate={dayjs(rangeToDate)}
-            onFromChange={onRangeFromChange}
-            onToChange={onRangeToChange}
-            maxTo={dayjs()}
-          />
-        }
       >
         <SearchBox
           value={search}
