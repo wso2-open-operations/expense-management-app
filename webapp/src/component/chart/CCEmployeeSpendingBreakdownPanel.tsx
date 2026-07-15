@@ -14,9 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, Skeleton, Typography } from "@wso2/oxygen-ui";
-import dayjs, { type Dayjs } from "dayjs";
-
-import DateRangePickerButton from "@component/common/DateRangePickerButton";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -33,30 +30,20 @@ import { type CurrencyCode, formatWithSymbol } from "@utils/currency";
 
 interface CCEmployeeSpendingBreakdownPanelProps {
   currency: CurrencyCode;
+  dateRange: string;
 }
-
-const now = dayjs();
-const DEFAULT_FROM = now.subtract(11, "month").startOf("month");
-const DEFAULT_TO = now.startOf("month");
-
-function buildDateRange(from: Dayjs, to: Dayjs): string {
-  return `custom:${from.year()}-${from.month() + 1}:${to.year()}-${to.month() + 1}`;
-}
-
 
 export default function CCEmployeeSpendingBreakdownPanel({
   currency,
+  dateRange,
 }: CCEmployeeSpendingBreakdownPanelProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [fromDate, setFromDate] = useState<Dayjs>(DEFAULT_FROM);
-  const [toDate, setToDate] = useState<Dayjs>(DEFAULT_TO);
   const [selectedEmployee, setSelectedEmployee] = useState<CCEmployeeSpendingItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
-  const dateRange = buildDateRange(fromDate, toDate);
   const { employees, loading, error } = useCCEmployeeSpendingList(dateRange);
 
   const filtered = useMemo(() => {
@@ -85,15 +72,6 @@ export default function CCEmployeeSpendingBreakdownPanel({
         title="Employee CC Spending Breakdown"
         subtitle="Cardholders with highest corporate card spend"
         minHeight={420}
-        action={
-          <DateRangePickerButton
-            fromDate={fromDate}
-            toDate={toDate}
-            onFromChange={setFromDate}
-            onToChange={setToDate}
-            maxTo={now}
-          />
-        }
       >
         <SearchBox
           value={search}
