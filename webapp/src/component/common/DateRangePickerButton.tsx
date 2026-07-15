@@ -71,11 +71,11 @@ export default function DateRangePickerButton({
           border: "1px solid",
           borderColor: open ? "primary.main" : "divider",
           color: open ? "primary.main" : "text.secondary",
-          bgcolor: open ? "action.selected" : "transparent",
+          bgcolor: open ? "action.selected" : "background.paper",
           transition: "all 0.15s ease",
           textTransform: "none",
           minWidth: 0,
-          "&:hover": { borderColor: "primary.main", color: "primary.main", bgcolor: open ? "action.selected" : "transparent" },
+          "&:hover": { borderColor: "primary.main", color: "primary.main", bgcolor: open ? "action.selected" : "background.paper" },
           whiteSpace: "nowrap",
         }}
       >
