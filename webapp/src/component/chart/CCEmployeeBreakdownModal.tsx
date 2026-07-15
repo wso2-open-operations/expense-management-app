@@ -42,6 +42,23 @@ type PeriodGranularity = (typeof PERIOD_GRANULARITIES)[number];
 
 const PERIOD_COLUMN_COUNT = 5;
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// Turns a "custom:YYYY-M:YYYY-M" range into a readable label; preset labels pass through as-is.
+function formatDateRangeLabel(dateRange: string): string {
+  if (!dateRange.startsWith("custom:")) return dateRange;
+  const parts = dateRange.slice(7).split(":");
+  if (parts.length !== 2) return dateRange;
+  const [fromYear, fromMonth] = parts[0].split("-").map(Number);
+  const [toYear, toMonth] = parts[1].split("-").map(Number);
+  if (!fromYear || !fromMonth || !toYear || !toMonth) return dateRange;
+  const from = `${MONTH_NAMES[fromMonth - 1]} ${fromYear}`;
+  const to = `${MONTH_NAMES[toMonth - 1]} ${toYear}`;
+  return from === to ? from : `${from} – ${to}`;
+}
+
 // Builds N fixed calendar periods (oldest first) for the chosen granularity, e.g.
 // Annually -> last 5 calendar years, Quarterly -> last 5 quarters, Monthly -> last 5 months.
 function generatePeriodColumns(
@@ -181,7 +198,7 @@ function CCSubCategoryPanel({ email, category, dateRange, fmtSym, color }: CCSub
 interface CCCategoryTableRowProps {
   category: string;
   color: string;
-  values: number[];
+  values: { total: number; txnCount: number; percentage: number }[];
   columnCount: number;
   fmtSym: (v: number) => string;
   email: string;
@@ -243,17 +260,22 @@ function CCCategoryTableRow({
         </Box>
 
         {values.map((value, idx) => (
-          <Typography
-            key={idx}
-            sx={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: value > 0 ? "text.primary" : "text.disabled",
-              textAlign: "right",
-            }}
-          >
-            {value > 0 ? fmtSym(value) : ""}
-          </Typography>
+          <Box key={idx} sx={{ textAlign: "right" }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: value.total > 0 ? "text.primary" : "text.disabled",
+              }}
+            >
+              {value.total > 0 ? fmtSym(value.total) : ""}
+            </Typography>
+            {value.total > 0 && (
+              <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
+                {value.txnCount} txns • {value.percentage.toFixed(1)}%
+              </Typography>
+            )}
+          </Box>
         ))}
       </Box>
 
@@ -540,9 +562,9 @@ export default function CCEmployeeBreakdownModal({
           {breakdown && (
             <>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
-                Total: {fmtSym(breakdown.totalAmount)}
+                Total ({formatDateRangeLabel(currentDateRange)}): {fmtSym(breakdown.totalAmount)}
               </Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#9E9E9E" }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 400, color: "text.disabled" }}>
                 No of Transactions: {breakdown.txnCount}
               </Typography>
             </>
@@ -698,7 +720,11 @@ export default function CCEmployeeBreakdownModal({
                       key={catKey}
                       category={catKey}
                       color={SEGMENT_COLORS[i % SEGMENT_COLORS.length]}
-                      values={periodCategoryMaps.map((m) => m.get(catKey)?.total ?? 0)}
+                      values={periodCategoryMaps.map((m) => ({
+                        total: m.get(catKey)?.total ?? 0,
+                        txnCount: m.get(catKey)?.txnCount ?? 0,
+                        percentage: m.get(catKey)?.percentage ?? 0,
+                      }))}
                       columnCount={periodColumns.length}
                       email={employeeEmail ?? ""}
                       latestDateRange={periodColumns[periodColumns.length - 1].dateRange}
@@ -726,12 +752,14 @@ export default function CCEmployeeBreakdownModal({
                       Total
                     </Typography>
                     {periodBreakdowns.map((p, idx) => (
-                      <Typography
-                        key={idx}
-                        sx={{ fontSize: 13, fontWeight: 800, color: "text.primary", textAlign: "right" }}
-                      >
-                        {fmtSym(p.breakdown?.totalAmount ?? 0)}
-                      </Typography>
+                      <Box key={idx} sx={{ textAlign: "right" }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                          {fmtSym(p.breakdown?.totalAmount ?? 0)}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11, color: "text.disabled" }}>
+                          {p.breakdown?.txnCount ?? 0} txns
+                        </Typography>
+                      </Box>
                     ))}
                   </Box>
                 </Box>
