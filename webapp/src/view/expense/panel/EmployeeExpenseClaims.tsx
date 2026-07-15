@@ -97,7 +97,7 @@ export default function EmployeeExpenseClaims() {
       {/* 3 summary cards */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" }, gap: 2 }}>
         {cardsLoading ? (
-          [...Array(3)].map((_, i) => <Skeleton key={i} variant="rectangular" height={130} sx={{ borderRadius: 1 }} />)
+          [...Array(3)].map((_, i) => <Skeleton key={i} variant="rectangular" height={130} sx={{ borderRadius: 0.5 }} />)
         ) : (
           <>
             <SummaryCard

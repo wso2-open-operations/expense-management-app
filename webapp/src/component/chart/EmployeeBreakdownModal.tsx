@@ -705,7 +705,7 @@ export default function EmployeeBreakdownModal({
                 sx={{
                   px: 2.5,
                   py: 0.7,
-                  borderRadius: "999px",
+                  borderRadius: "11px",
                   cursor: "pointer",
                   border: "1.5px solid",
                   borderColor: periodGranularity === granularity ? "primary.main" : "divider",
