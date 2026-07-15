@@ -51,8 +51,8 @@ const currentYear = nowJs.getFullYear();
 const currentMonth = nowJs.toLocaleString("default", { month: "long" });
 
 const nowDayjs = dayjs();
-const DEFAULT_CAT_FROM = nowDayjs.subtract(11, "month").startOf("month").startOf("day");
-const DEFAULT_CAT_TO = nowDayjs;
+const DEFAULT_FROM_DATE = dayjs("2022-01-01").startOf("month").startOf("day");
+const DEFAULT_TO_DATE = nowDayjs;
 
 function buildDateRange(from: Dayjs, to: Dayjs): string {
   return `custom:${from.year()}-${from.month() + 1}:${to.year()}-${to.month() + 1}`;
@@ -71,19 +71,16 @@ export default function CreditCard() {
   const [selectedCard, setSelectedCard] = useState<CCCardListItem | null>(null);
   const [cardDetailsOpen, setCardDetailsOpen] = useState(false);
   const [hoveredCategoryIdx, setHoveredCategoryIdx] = useState<number | null>(null);
-  const [catFromDate, setCatFromDate] = useState<Dayjs>(DEFAULT_CAT_FROM);
-  const [catToDate, setCatToDate] = useState<Dayjs>(DEFAULT_CAT_TO);
-  const [cardsFromDate, setCardsFromDate] = useState<Dayjs>(DEFAULT_CAT_FROM);
-  const [cardsToDate, setCardsToDate] = useState<Dayjs>(DEFAULT_CAT_TO);
+  const [fromDate, setFromDate] = useState<Dayjs>(DEFAULT_FROM_DATE);
+  const [toDate, setToDate] = useState<Dayjs>(DEFAULT_TO_DATE);
 
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
-  const catDateRange = buildDateRange(catFromDate, catToDate);
-  const cardsDateRange = buildDateRange(cardsFromDate, cardsToDate);
+  const dateRange = buildDateRange(fromDate, toDate);
 
   const { data: summary, loading: summaryLoading } = useCCSummary();
-  const { items: cardTypes, loading: cardTypesLoading } = useCCCardTypeAnalysis(catDateRange);
-  const { cards: cardList, loading: cardListLoading } = useCCCardList(cardsDateRange);
+  const { items: cardTypes, loading: cardTypesLoading } = useCCCardTypeAnalysis(dateRange);
+  const { cards: cardList, loading: cardListLoading } = useCCCardList(dateRange);
 
   const filteredCards = useMemo(() => {
     let list = cardList;
@@ -132,6 +129,13 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
 
       {/* Filters bar */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <DateRangePickerButton
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromChange={setFromDate}
+          onToChange={setToDate}
+          maxTo={nowDayjs}
+        />
         <CurrencySelector
           value={currency}
           onChange={(val) => setCurrency(val)}
@@ -190,15 +194,6 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
         title="Expense Breakdown by Type"
         subtitle="Overall CC spend by engagement area — click a category to view cardholders"
         minHeight={220}
-        action={
-          <DateRangePickerButton
-            fromDate={catFromDate}
-            toDate={catToDate}
-            onFromChange={setCatFromDate}
-            onToChange={setCatToDate}
-            maxTo={nowDayjs}
-          />
-        }
       >
         {cardTypesLoading ? (
           <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
@@ -274,22 +269,13 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
       </ChartCard>
 
       {/* Employee-wise CC Spending Breakdown */}
-      <CCEmployeeSpendingBreakdownPanel currency={currency} />
+      <CCEmployeeSpendingBreakdownPanel currency={currency} dateRange={dateRange} />
 
       {/* Corporate Cards table */}
       <ChartCard
         title="Corporate Cards"
         subtitle="All issued corporate cards — Total Spend reflects the selected period"
         minHeight={300}
-        action={
-          <DateRangePickerButton
-            fromDate={cardsFromDate}
-            toDate={cardsToDate}
-            onFromChange={setCardsFromDate}
-            onToChange={setCardsToDate}
-            maxTo={nowDayjs}
-          />
-        }
       >
         {/* Search + Status filter bar */}
         <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}>
