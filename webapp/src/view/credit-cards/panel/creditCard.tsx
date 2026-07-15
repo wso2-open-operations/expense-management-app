@@ -269,7 +269,12 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
       </ChartCard>
 
       {/* Employee-wise CC Spending Breakdown */}
-      <CCEmployeeSpendingBreakdownPanel currency={currency} dateRange={dateRange} />
+      <CCEmployeeSpendingBreakdownPanel
+        currency={currency}
+        dateRange={dateRange}
+        fromDate={fromDate}
+        toDate={toDate}
+      />
 
       {/* Corporate Cards table */}
       <ChartCard
