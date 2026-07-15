@@ -139,8 +139,8 @@ public function getOpdClaimSummary(AppConfig config, int year, int monthRange, i
     decimal currentMonthClaimAmount = check database:queryClaimAmount(year, monthRange);
     int previousYearClaimCount = check database:queryClaimCount(year - 1);
     int gracePeriodClaims = check database:queryGracePeriodClaimCount(
-        year,
-        config.lastYearClaimGracePeriodInDays
+            year,
+            config.lastYearClaimGracePeriodInDays
     );
     string[] allEmployeeEmails = check database:queryAllClaimEmployeeEmails();
     int totalEmployees = allEmployeeEmails.length();
@@ -149,9 +149,9 @@ public function getOpdClaimSummary(AppConfig config, int year, int monthRange, i
     map<boolean> employeesWithClaimsSet = toEmployeesWithClaimsSet(employeeTotals);
     int fullyClaimedEmployees = countFullyClaimedEmployees(employeeTotals, config.claimLimit);
     OpdClaimBucket[] activeClaimsChart = buildActiveClaimsChart(
-        employeeTotals,
-        config.claimLimit,
-        config.claimRangeStep
+            employeeTotals,
+            config.claimLimit,
+            config.claimRangeStep
     );
 
     int unclaimedEmployees = totalEmployees - employeesWithClaimsSet.length();

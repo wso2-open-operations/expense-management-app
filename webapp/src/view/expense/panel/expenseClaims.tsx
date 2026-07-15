@@ -336,6 +336,8 @@ export default function ExpenseClaims() {
           dateRange={pickerDateRange}
           businessUnit={filters.businessUnit}
           currency={currency}
+          fromDate={fromDate}
+          toDate={toDate}
         />
       </Box>
 

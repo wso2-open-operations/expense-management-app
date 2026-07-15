@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, Skeleton, Typography } from "@wso2/oxygen-ui";
+import type { Dayjs } from "dayjs";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -31,11 +32,15 @@ import { type CurrencyCode, formatWithSymbol } from "@utils/currency";
 interface CCEmployeeSpendingBreakdownPanelProps {
   currency: CurrencyCode;
   dateRange: string;
+  fromDate: Dayjs;
+  toDate: Dayjs;
 }
 
 export default function CCEmployeeSpendingBreakdownPanel({
   currency,
   dateRange,
+  fromDate,
+  toDate,
 }: CCEmployeeSpendingBreakdownPanelProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -183,6 +188,8 @@ export default function CCEmployeeSpendingBreakdownPanel({
         employeeName={selectedEmployee?.name ?? ""}
         currency={currency}
         dateRange={dateRange}
+        fromDate={fromDate}
+        toDate={toDate}
       />
     </>
   );

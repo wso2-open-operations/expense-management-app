@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, CircularProgress, Typography, Dialog, DialogContent } from "@wso2/oxygen-ui";
+import type { Dayjs } from "dayjs";
 import { ChevronDown, ChevronRight, Download, X } from "lucide-react";
 // Skeleton, TrendingDown, TrendingUp were used by PeriodComparison, which is commented out below
 
@@ -33,23 +34,6 @@ const PERIOD_GRANULARITIES = ["Annually", "Quarterly", "Monthly"] as const;
 type PeriodGranularity = (typeof PERIOD_GRANULARITIES)[number];
 
 const PERIOD_COLUMN_COUNT = 5;
-
-const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-// Turns a "custom:YYYY-M:YYYY-M" range into a readable label; preset labels (e.g. "All Time") pass through as-is.
-function formatDateRangeLabel(dateRange: string): string {
-  if (!dateRange.startsWith("custom:")) return dateRange;
-  const parts = dateRange.slice(7).split(":");
-  if (parts.length !== 2) return dateRange;
-  const [fromYear, fromMonth] = parts[0].split("-").map(Number);
-  const [toYear, toMonth] = parts[1].split("-").map(Number);
-  if (!fromYear || !fromMonth || !toYear || !toMonth) return dateRange;
-  const from = `${MONTH_NAMES[fromMonth - 1]} ${fromYear}`;
-  const to = `${MONTH_NAMES[toMonth - 1]} ${toYear}`;
-  return from === to ? from : `${from} – ${to}`;
-}
 
 // Builds N fixed calendar periods (oldest first) for the chosen granularity, e.g.
 // Annually -> last 5 calendar years, Quarterly -> last 5 quarters, Monthly -> last 5 months.
@@ -479,6 +463,8 @@ export interface EmployeeBreakdownModalProps {
   employeeName: string;
   dateRange: string;
   currency: CurrencyCode;
+  fromDate: Dayjs;
+  toDate: Dayjs;
 }
 
 export default function EmployeeBreakdownModal({
@@ -488,6 +474,8 @@ export default function EmployeeBreakdownModal({
   employeeName,
   dateRange,
   currency,
+  fromDate,
+  toDate,
 }: EmployeeBreakdownModalProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>("All");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -637,10 +625,10 @@ export default function EmployeeBreakdownModal({
           {breakdown && (
             <>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mt: 0.4 }}>
-                Total ({formatDateRangeLabel(dateRange)}): {fmtSym(breakdown.totalAmount)}
+                Total: {fmtSym(breakdown.totalAmount)}
               </Typography>
               <Typography sx={{ fontSize: 11, fontWeight: 400, color: "#9E9E9E" }}>
-                No of Transactions: {breakdown.claimCount}
+                {breakdown.claimCount} transaction{breakdown.claimCount !== 1 ? "s" : ""} · {fromDate.format("DD MMM YYYY")} – {toDate.format("DD MMM YYYY")}
               </Typography>
             </>
           )}
@@ -656,13 +644,15 @@ export default function EmployeeBreakdownModal({
               opacity: breakdown && !exportLoading ? 1 : 0.5,
               px: 2,
               py: 0.7,
-              borderRadius: 1.5,
-              bgcolor: "primary.main",
-              color: "#fff",
+              borderRadius: "999px",
+              border: "1.5px solid",
+              borderColor: "primary.main",
+              bgcolor: "transparent",
+              color: "primary.main",
               fontWeight: 700,
               fontSize: 13,
               transition: "all 0.15s ease",
-              "&:hover": breakdown && !exportLoading ? { bgcolor: "primary.dark" } : {},
+              "&:hover": breakdown && !exportLoading ? { bgcolor: "action.hover" } : {},
               userSelect: "none",
             }}
           >
@@ -699,39 +689,47 @@ export default function EmployeeBreakdownModal({
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 3,
-            mb: 2,
-            borderBottom: "1px solid",
-            borderColor: "divider",
+            justifyContent: "space-between",
+            mb: 1.5,
           }}
         >
-          {PERIOD_GRANULARITIES.map((granularity) => (
-            <Box
-              key={granularity}
-              onClick={() => setPeriodGranularity(granularity)}
-              sx={{
-                pb: 1,
-                cursor: "pointer",
-                borderBottom: "2px solid",
-                borderColor: periodGranularity === granularity ? "primary.main" : "transparent",
-              }}
-            >
-              <Typography
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary" }}>
+            Expense breakdown by type
+          </Typography>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: 2 }}>
+            {PERIOD_GRANULARITIES.map((granularity) => (
+              <Box
+                key={granularity}
+                onClick={() => setPeriodGranularity(granularity)}
                 sx={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: periodGranularity === granularity ? "primary.main" : "text.secondary",
+                  px: 2.5,
+                  py: 0.7,
+                  borderRadius: "999px",
+                  cursor: "pointer",
+                  border: "1.5px solid",
+                  borderColor: periodGranularity === granularity ? "primary.main" : "divider",
+                  bgcolor: periodGranularity === granularity ? "primary.main" : "transparent",
+                  transition: "all 0.15s ease",
+                  userSelect: "none",
+                  "&:hover": {
+                    bgcolor: periodGranularity === granularity ? "primary.main" : "action.hover",
+                  },
                 }}
               >
-                {granularity}
-              </Typography>
-            </Box>
-          ))}
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: periodGranularity === granularity ? "#fff" : "text.secondary",
+                  }}
+                >
+                  {granularity}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
-
-        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "text.primary", mb: 1 }}>
-          Expense breakdown by type
-        </Typography>
 
         <Box
           sx={{
