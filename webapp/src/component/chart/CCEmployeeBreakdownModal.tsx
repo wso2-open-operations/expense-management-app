@@ -622,7 +622,7 @@ export default function CCEmployeeBreakdownModal({
                 sx={{
                   px: 2.5,
                   py: 0.7,
-                  borderRadius: "800px",
+                  borderRadius: "700px",
                   cursor: "pointer",
                   border: "1.5px solid",
                   borderColor: periodGranularity === granularity ? "primary.main" : "divider",
