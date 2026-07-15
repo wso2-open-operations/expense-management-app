@@ -14,12 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Box, Skeleton, Typography } from "@wso2/oxygen-ui";
-import dayjs, { type Dayjs } from "dayjs";
 
 import { useEffect, useMemo, useState } from "react";
 
 import ChartCard from "@component/chart/ChartCard";
-import DateRangePickerButton from "@component/common/DateRangePickerButton";
 import PaginationBar from "@component/common/PaginationBar";
 import SearchBox from "@component/common/SearchBox";
 import { PAGE_SIZE_LEADS } from "@config/constant";
@@ -50,10 +48,6 @@ interface LeadApprovalFrequencyPanelProps {
   dateRange: string;
   businessUnit: string;
   currency: CurrencyCode;
-  rangeFromDate: string;
-  rangeToDate: string;
-  onRangeFromChange: (d: Dayjs) => void;
-  onRangeToChange: (d: Dayjs) => void;
   fallbackLeads?: TopLeadItem[];
 }
 
@@ -159,10 +153,6 @@ export default function LeadApprovalFrequencyPanel({
   dateRange,
   businessUnit,
   currency,
-  rangeFromDate,
-  rangeToDate,
-  onRangeFromChange,
-  onRangeToChange,
   fallbackLeads = [],
 }: LeadApprovalFrequencyPanelProps) {
   const [search, setSearch] = useState("");
@@ -210,15 +200,6 @@ export default function LeadApprovalFrequencyPanel({
         title="Lead Approval Breakdown"
         subtitle="Average days from claim submission to lead approval"
         minHeight={420}
-        action={
-          <DateRangePickerButton
-            fromDate={dayjs(rangeFromDate)}
-            toDate={dayjs(rangeToDate)}
-            onFromChange={onRangeFromChange}
-            onToChange={onRangeToChange}
-            maxTo={dayjs()}
-          />
-        }
       >
         <SearchBox
           value={search}
