@@ -47,7 +47,7 @@ const prevMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLoc
 );
 
 const now = dayjs();
-const DEFAULT_FROM_DATE = now.startOf("month");
+const DEFAULT_FROM_DATE = dayjs("2023-01-01").startOf("month");
 const DEFAULT_TO_DATE = now;
 
 function buildDateRange(from: Dayjs, to: Dayjs): string {
