@@ -51,7 +51,7 @@ const currentYear = nowJs.getFullYear();
 const currentMonth = nowJs.toLocaleString("default", { month: "long" });
 
 const nowDayjs = dayjs();
-const DEFAULT_FROM_DATE = dayjs("2022-01-01").startOf("month").startOf("day");
+const DEFAULT_FROM_DATE = nowDayjs.startOf("month").startOf("day");
 const DEFAULT_TO_DATE = nowDayjs;
 
 function buildDateRange(from: Dayjs, to: Dayjs): string {
@@ -122,6 +122,16 @@ export default function CreditCard() {
     setCardsPage(0);
   };
 
+  const handleFromDateChange = (val: Dayjs) => {
+    setFromDate(val);
+    setCardsPage(0);
+  };
+
+  const handleToDateChange = (val: Dayjs) => {
+    setToDate(val);
+    setCardsPage(0);
+  };
+
 const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
 
   return (
@@ -132,8 +142,8 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
         <DateRangePickerButton
           fromDate={fromDate}
           toDate={toDate}
-          onFromChange={setFromDate}
-          onToChange={setToDate}
+          onFromChange={handleFromDateChange}
+          onToChange={handleToDateChange}
           maxTo={nowDayjs}
         />
         <CurrencySelector
@@ -441,6 +451,7 @@ const totalCCSpend = cardTypes.reduce((s, i) => s + i.totalSpend, 0);
           status={selectedCard.status}
           totalSpend={selectedCard.usedAmount}
           currency={currency}
+          dateRange={dateRange}
         />
       )}
 

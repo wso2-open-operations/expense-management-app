@@ -61,7 +61,7 @@ export default function EmployeeSpendingBreakdownPanel({
     );
   }, [employees, search]);
 
-  useEffect(() => { setPage(0); }, [search]);
+  useEffect(() => { setPage(0); }, [search, dateRange, businessUnit]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE_EMPLOYEES);
   const paginated = filtered.slice(page * PAGE_SIZE_EMPLOYEES, (page + 1) * PAGE_SIZE_EMPLOYEES);

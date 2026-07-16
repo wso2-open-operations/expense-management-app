@@ -30,17 +30,16 @@ const SEGMENT_COLORS = [
   "#90EE90", "#DA70D6",
 ];
 
-const DATE_RANGE = "All Time";
-
 interface TxnPanelProps {
   email: string;
   category: string;
+  dateRange: string;
   fmtSym: (v: number) => string;
   color: string;
 }
 
-function TxnPanel({ email, category, fmtSym, color }: TxnPanelProps) {
-  const { transactions, loading } = useCCEmployeeCategoryTransactions(email, category, DATE_RANGE);
+function TxnPanel({ email, category, dateRange, fmtSym, color }: TxnPanelProps) {
+  const { transactions, loading } = useCCEmployeeCategoryTransactions(email, category, dateRange);
 
   return (
     <Box sx={{ mx: 1, mb: 1, borderRadius: 1.5, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
@@ -87,15 +86,16 @@ export interface CCCardDetailsModalProps {
   status: string;
   totalSpend: number;
   currency: CurrencyCode;
+  dateRange: string;
 }
 
 export default function CCCardDetailsModal({
-  open, onClose, cardId, cardNumber, holderName, holderEmail, cardType, status, currency,
+  open, onClose, cardId, cardNumber, holderName, holderEmail, cardType, status, currency, dateRange,
 }: CCCardDetailsModalProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const fmtSym = (v: number) => formatWithSymbol(v, currency);
 
-  const { breakdown, loading } = useCCEmployeeBreakdown(open ? holderEmail : null, DATE_RANGE);
+  const { breakdown, loading } = useCCEmployeeBreakdown(open ? holderEmail : null, dateRange);
 
   const handleExport = () => {
     if (!breakdown) return;
@@ -109,7 +109,7 @@ export default function CCCardDetailsModal({
       currency,
       totalSpend: breakdown.totalAmount,
       txnCount: breakdown.txnCount,
-      dateRange: DATE_RANGE,
+      dateRange,
       categories: breakdown.categories.map((c) => ({
         category: c.category,
         total: c.total,
@@ -253,6 +253,7 @@ export default function CCCardDetailsModal({
                       <TxnPanel
                         email={holderEmail}
                         category={cat.category}
+                        dateRange={dateRange}
                         fmtSym={fmtSym}
                         color={color}
                       />
