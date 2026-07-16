@@ -51,7 +51,7 @@ const currentYear = nowJs.getFullYear();
 const currentMonth = nowJs.toLocaleString("default", { month: "long" });
 
 const nowDayjs = dayjs();
-const DEFAULT_FROM_DATE = nowDayjs.startOf("month").startOf("day");
+const DEFAULT_FROM_DATE = dayjs("2023-01-01").startOf("month").startOf("day");
 const DEFAULT_TO_DATE = nowDayjs;
 
 function buildDateRange(from: Dayjs, to: Dayjs): string {
