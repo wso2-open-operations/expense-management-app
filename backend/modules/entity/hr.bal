@@ -14,7 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/cache;
 import ballerina/http;
+import ballerina/log;
+
+const int EMPLOYEE_NAME_CACHE_CAPACITY = 5000;
+const decimal EMPLOYEE_NAME_CACHE_DEFAULT_MAX_AGE = 3600.0d; // TTL: 1 hour
+const decimal EMPLOYEE_NAME_CACHE_CLEANUP_INTERVAL = 1800.0d; // Eviction interval
+
+// Thread-safe in-memory cache to store email -> full name mappings
+final cache:Cache employeeNameCache = new ({
+    capacity: EMPLOYEE_NAME_CACHE_CAPACITY,
+    defaultMaxAge: EMPLOYEE_NAME_CACHE_DEFAULT_MAX_AGE,
+    cleanupInterval: EMPLOYEE_NAME_CACHE_CLEANUP_INTERVAL
+});
 
 # Fetch basic employee details for the given work email from the HR entity service.
 #
@@ -55,11 +68,26 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
         if lower == "" || nameMap.hasKey(lower) {
             continue;
         }
+        //check cache first Before calling the HR entity service
+        any|cache:Error cached = employeeNameCache.get(lower);
+        if cached is string {
+            // Cache Hit: Serve directly from memory without network calls
+            nameMap[lower] = cached;
+            continue;
+        }
+
+        // Cache Miss: Proceed to call downstream service
         Employee|error emp = fetchEmployeesBasicInfo(email);
         if emp is Employee {
-            nameMap[lower] = emp.firstName + " " + emp.lastName;
+            string fullName = emp.firstName + " " + emp.lastName;
+            nameMap[lower] = fullName;
+
+            // Store the resolved name in cache for future use
+            cache:Error? cacheErr = employeeNameCache.put(lower, fullName);
+            if cacheErr is cache:Error {
+                log:printWarn("Failed to cache employee name", cacheErr, email = lower);
+            }
         }
     }
     return nameMap;
 }
-
