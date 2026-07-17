@@ -37,8 +37,9 @@ public isolated function fetchEmployeesBasicInfo(string[] batchEmails) returns E
     http:Response response = check hrClient->post("/employee-batch-search", request);
 
     if response.statusCode < 200 || response.statusCode >= 300 {
-        string responseBody = check response.getTextPayload();
-        return error(string `HR service request failed with status ${response.statusCode}: ${responseBody}`);
+        string|error responseBody = response.getTextPayload();
+        string bodyText = responseBody is string ? responseBody : "<no response body>";
+        return error(string `HR service request failed with status ${response.statusCode}: ${bodyText}`);
     }
 
     json payload = check response.getJsonPayload();
