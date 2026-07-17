@@ -18,43 +18,35 @@ import ballerina/cache;
 import ballerina/http;
 import ballerina/log;
 
-const int EMPLOYEE_NAME_CACHE_CAPACITY = 5000;
-const decimal EMPLOYEE_NAME_CACHE_DEFAULT_MAX_AGE = 3600.0d; // TTL: 1 hour
-const decimal EMPLOYEE_NAME_CACHE_CLEANUP_INTERVAL = 1800.0d; // Eviction interval
-
-// Thread-safe in-memory cache to store email -> full name mappings
 final cache:Cache employeeNameCache = new ({
-    capacity: EMPLOYEE_NAME_CACHE_CAPACITY,
-    defaultMaxAge: EMPLOYEE_NAME_CACHE_DEFAULT_MAX_AGE,
-    cleanupInterval: EMPLOYEE_NAME_CACHE_CLEANUP_INTERVAL
+    capacity: 1000,
+    defaultMaxAge: 86400.0d, // TTL: 1 day
+    cleanupInterval: 1800.0d // Eviction interval
 });
 
-# Fetch basic employee details for the given work email from the HR entity service.
+# Fetch basic employee details for the given batch of work emails from the HR entity service.
 #
-# + workEmail - Work email address of the employee to look up
-# + return - Employee details if the HR entity lookup succeeds, otherwise an error
-public isolated function fetchEmployeesBasicInfo(string workEmail) returns Employee|error {
-    json requestPayload = {"email": workEmail};
+# + batchEmails - Array of work email addresses to look up
+# + return - Array of employee details if the HR entity lookup succeeds, otherwise an error
+public isolated function fetchEmployeesBasicInfo(string[] batchEmails) returns Employee[]|error {
+    json requestPayload = {"emails": batchEmails};
 
     http:Request request = new;
     request.setJsonPayload(requestPayload);
 
-    http:Response response = check hrClient->post("/employee-basic-search", request);
+    http:Response response = check hrClient->post("/employee-batch-search", request);
 
-    if response.statusCode == 404 {
-        return error(string `Employee not found for email: ${workEmail}`);
-    }
     if response.statusCode < 200 || response.statusCode >= 300 {
         string responseBody = check response.getTextPayload();
         return error(string `HR service request failed with status ${response.statusCode}: ${responseBody}`);
     }
 
     json payload = check response.getJsonPayload();
-    Employee|error employee = payload.cloneWithType();
-    if employee is error {
-        return employee;
+    Employee[]|error employees = payload.cloneWithType();
+    if employees is error {
+        return employees;
     }
-    return employee;
+    return employees;
 }
 
 # Fetch a map of lowercase work email → full name for the given list of emails.
@@ -63,31 +55,40 @@ public isolated function fetchEmployeesBasicInfo(string workEmail) returns Emplo
 # + return - Map of email to "firstName lastName" if successful, otherwise an error
 public isolated function fetchEmployeeNameMap(string[] emails) returns map<string>|error {
     map<string> nameMap = {};
+    string[] batchEmails = [];
+    
     foreach string email in emails {
         string lower = email.trim().toLowerAscii();
         if lower == "" || nameMap.hasKey(lower) {
             continue;
         }
-        //check cache first Before calling the HR entity service
         any|cache:Error cached = employeeNameCache.get(lower);
         if cached is string {
-            // Cache Hit: Serve directly from memory without network calls
             nameMap[lower] = cached;
             continue;
         }
 
-        // Cache Miss: Proceed to call downstream service
-        Employee|error emp = fetchEmployeesBasicInfo(email);
-        if emp is Employee {
+        batchEmails.push(email);
+    }
+
+    if batchEmails.length() > 0 {
+        Employee[] employees = check fetchEmployeesBasicInfo(batchEmails);
+        
+        foreach Employee emp in employees {
+            string? empEmail = emp.email;
+            if empEmail is () {
+                continue;
+            }
+            string lower = empEmail.trim().toLowerAscii();
             string fullName = emp.firstName + " " + emp.lastName;
             nameMap[lower] = fullName;
 
-            // Store the resolved name in cache for future use
             cache:Error? cacheErr = employeeNameCache.put(lower, fullName);
             if cacheErr is cache:Error {
                 log:printWarn("Failed to cache employee name", cacheErr, email = lower);
             }
         }
     }
+    
     return nameMap;
 }
