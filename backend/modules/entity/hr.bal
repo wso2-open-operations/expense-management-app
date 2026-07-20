@@ -15,7 +15,6 @@
 // under the License.
 
 import ballerina/cache;
-import ballerina/http;
 import ballerina/log;
 
 final cache:Cache employeeNameCache = new ({
@@ -24,30 +23,19 @@ final cache:Cache employeeNameCache = new ({
     cleanupInterval: 1800.0d // Eviction interval
 });
 
-# Fetch basic employee details for the given batch of work emails from the HR entity service.
+# Fetch basic employee details for the given work emails from the HR entity service.
 #
-# + batchEmails - Array of work email addresses to look up
+# + emails - Array of work email addresses to look up
 # + return - Array of employee details if the HR entity lookup succeeds, otherwise an error
-public isolated function fetchEmployeesBasicInfo(string[] batchEmails) returns Employee[]|error {
-    json requestPayload = {"emails": batchEmails};
+public isolated function fetchEmployeeBatch(string[] emails) returns Employee[]|error {
+    return check postEmployeeBatchSearch({"emails": emails});
+}
 
-    http:Request request = new;
-    request.setJsonPayload(requestPayload);
-
-    http:Response response = check hrClient->post("/employee-batch-search", request);
-
-    if response.statusCode < 200 || response.statusCode >= 300 {
-        string|error responseBody = response.getTextPayload();
-        string bodyText = responseBody is string ? responseBody : "<no response body>";
-        return error(string `HR service request failed with status ${response.statusCode}: ${bodyText}`);
-    }
-
-    json payload = check response.getJsonPayload();
-    Employee[]|error employees = payload.cloneWithType();
-    if employees is error {
-        return employees;
-    }
-    return employees;
+// Extracted so tests can mock the HR entity call directly via `@test:Mock`,
+// since `hrClient` is `final` and cannot be reassigned/mocked as an object.
+isolated function postEmployeeBatchSearch(json payload) returns Employee[]|error {
+    // Direct call without locks since hrClient is public final and isolated-safe
+    return check hrClient->/["employee-batch-search"].post(payload);
 }
 
 # Fetch a map of lowercase work email → full name for the given list of emails.
@@ -63,9 +51,22 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
         if lower == "" || nameMap.hasKey(lower) {
             continue;
         }
-        any|cache:Error cached = employeeNameCache.get(lower);
-        if cached is string {
-            nameMap[lower] = cached;
+        
+        boolean cacheHit = false;
+        string cachedName = "";
+
+        lock {
+            if employeeNameCache.hasKey(lower) {
+                var cached = employeeNameCache.get(lower);
+                if cached is string {
+                    cachedName = cached;
+                    cacheHit = true;
+                }
+            }
+        }
+
+        if cacheHit {
+            nameMap[lower] = cachedName;
             continue;
         }
 
@@ -73,20 +74,18 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
     }
 
     if batchEmails.length() > 0 {
-        Employee[] employees = check fetchEmployeesBasicInfo(batchEmails);
+        Employee[] employees = check fetchEmployeeBatch(batchEmails);
         
         foreach Employee emp in employees {
-            string? empEmail = emp.email;
-            if empEmail is () {
-                continue;
-            }
-            string lower = empEmail.trim().toLowerAscii();
+            string lower = emp.email.trim().toLowerAscii();
             string fullName = emp.firstName + " " + emp.lastName;
             nameMap[lower] = fullName;
 
-            cache:Error? cacheErr = employeeNameCache.put(lower, fullName);
-            if cacheErr is cache:Error {
-                log:printWarn("Failed to cache employee name", cacheErr, email = lower);
+            lock {
+                cache:Error? cacheErr = employeeNameCache.put(lower, fullName);
+                if cacheErr is cache:Error {
+                    log:printWarn("Failed to cache employee name", cacheErr, email = lower);
+                }
             }
         }
     }
