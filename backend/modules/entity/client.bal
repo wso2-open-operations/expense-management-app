@@ -35,5 +35,5 @@ isolated function buildHrClientConfig(Oauth2Config? cfg) returns http:ClientConf
     label: "HR Entity REST Service",
     id: "hris/hr-entity-service"
 }
-final http:Client hrClient = check new (hrEntityBaseUrl, buildHrClientConfig(oauthConfig));
+public final http:Client hrClient = check new (hrEntityBaseUrl, buildHrClientConfig(oauthConfig));
 
