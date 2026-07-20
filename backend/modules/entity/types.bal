@@ -33,7 +33,7 @@ public type Employee record {|
     # Thumbnail URL of the employee
     string? employeeThumbnail;
     # Email address from Asgardeo userinfo, used for subject binding
-    string? email;
+    string email;
 |};
 
 # Search filter payload sent to the HR entity service.
