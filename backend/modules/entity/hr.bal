@@ -27,14 +27,7 @@ final cache:Cache employeeNameCache = new ({
 # + emails - Array of work email addresses to look up
 # + return - Array of employee details if the HR entity lookup succeeds, otherwise an error
 public isolated function fetchEmployeeBatch(string[] emails) returns Employee[]|error {
-    return check postEmployeeBatchSearch({"emails": emails});
-}
-
-// Extracted so tests can mock the HR entity call directly via `@test:Mock`,
-// since `hrClient` is `final` and cannot be reassigned/mocked as an object.
-isolated function postEmployeeBatchSearch(json payload) returns Employee[]|error {
-    // Direct call without locks since hrClient is public final and isolated-safe
-    return check hrClient->/["employee-batch-search"].post(payload);
+    return check hrClient->/["employee-batch-search"].post({"emails": emails});
 }
 
 # Fetch a map of lowercase work email → full name for the given list of emails.

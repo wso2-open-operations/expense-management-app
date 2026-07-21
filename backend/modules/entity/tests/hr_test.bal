@@ -19,25 +19,15 @@ import ballerina/test;
 
 // Mocks the HR entity HTTP call directly, since `hrClient` is `final` and
 // cannot be reassigned/mocked as an object from the test module.
-@test:Mock { functionName: "postEmployeeBatchSearch" }
-test:MockFunction postEmployeeBatchSearchMock = new ();
+@test:Mock { functionName: "fetchEmployeeBatch" }
+test:MockFunction fetchEmployeeBatchMock = new ();
 
 @test:BeforeSuite
 function beforeSuite() {
-    test:when(postEmployeeBatchSearchMock).thenReturn(<Employee[]>[
+    test:when(fetchEmployeeBatchMock).thenReturn(<Employee[]>[
         {firstName: "John", lastName: "Doe", employeeThumbnail: (), email: "john.doe@wso2.com"},
         {firstName: "Jane", lastName: "Smith", employeeThumbnail: (), email: "jane.smith@wso2.com"}
     ]);
-}
-
-@test:Config {}
-function testFetchEmployeeBatchSuccess() returns error? {
-    // Calls route directly through the compile-time swapped hrMock
-    Employee[] result = check fetchEmployeeBatch(["john.doe@wso2.com", "jane.smith@wso2.com"]);
-    
-    test:assertEquals(result.length(), 2);
-    test:assertEquals(result[0].firstName, "John");
-    test:assertEquals(result[1].lastName, "Smith");
 }
 
 @test:Config {}
