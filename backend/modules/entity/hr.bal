@@ -19,8 +19,7 @@ import ballerina/log;
 
 final cache:Cache employeeNameCache = new ({
     capacity: 1000,
-    defaultMaxAge: 86400.0d, // TTL: 1 day
-    cleanupInterval: 1800.0d // Eviction interval
+    defaultMaxAge: 86400.0d // TTL: 1 day
 });
 
 # Fetch basic employee details for the given work emails from the HR entity service.
