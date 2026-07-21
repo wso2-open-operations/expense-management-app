@@ -52,22 +52,14 @@ public isolated function fetchEmployeeNameMap(string[] emails) returns map<strin
             continue;
         }
         
-        boolean cacheHit = false;
-        string cachedName = "";
-
         lock {
             if employeeNameCache.hasKey(lower) {
                 var cached = employeeNameCache.get(lower);
                 if cached is string {
-                    cachedName = cached;
-                    cacheHit = true;
+                    nameMap[lower] = cached;
+                    continue;
                 }
             }
-        }
-
-        if cacheHit {
-            nameMap[lower] = cachedName;
-            continue;
         }
 
         batchEmails.push(email);
