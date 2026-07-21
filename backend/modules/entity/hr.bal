@@ -26,8 +26,8 @@ final cache:Cache employeeNameCache = new ({
 #
 # + emails - Array of work email addresses to look up
 # + return - Array of employee details if the HR entity lookup succeeds, otherwise an error
-public isolated function fetchEmployeeBatch(string[] emails) returns Employee[]|error {
-    return check hrClient->/["employee-batch-search"].post({"emails": emails});
+isolated function fetchEmployeeBatch(string[] emails) returns Employee[]|error {
+    return check hrClient->/["employee-batch-search"].post({emails});
 }
 
 # Fetch a map of lowercase work email → full name for the given list of emails.
