@@ -250,7 +250,11 @@ export function resolveCCDateRangeParams(dateRange: string): { year: string; mon
       const [toYear, toMonth] = parts[1].split("-").map(Number);
       if (fromYear && fromMonth && toYear && toMonth) {
         const raw = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
-        const monthRange = Math.min(36, Math.max(1, raw)); // backend rejects > 36
+        
+        if (raw > 36) {
+          return { year: String(toYear), month: String(toMonth), monthRange: "0" };
+        }
+        const monthRange = Math.max(1, raw);
         return { year: String(toYear), month: String(toMonth), monthRange: String(monthRange) };
       }
     }
