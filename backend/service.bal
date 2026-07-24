@@ -15,12 +15,10 @@
 // under the License.
 import expense_management.authorization;
 import expense_management.database;
-import expense_management.entity;
 
 import ballerina/cache;
 import ballerina/http;
 import ballerina/log;
-import ballerina/time;
 
 public configurable AppConfig appConfig = ?;
 
@@ -29,116 +27,6 @@ final cache:Cache cache = new ({
     defaultMaxAge: CACHE_DEFAULT_MAX_AGE,
     cleanupInterval: CACHE_CLEANUP_INTERVAL
 });
-
-isolated function extractUserInfo(http:RequestContext ctx) returns authorization:UserInfo|http:BadRequest {
-    authorization:UserInfo|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
-    if userInfo is error {
-        return <http:BadRequest>{body: {message: "User information header not found!"}};
-    }
-    return userInfo;
-}
-
-isolated function resolveEffectiveDate(int? year, int? month) returns [int, int]|HttpInternalServerError {
-    time:Civil|error civilTime = time:utcToCivil(time:utcNow());
-    if civilTime is error {
-        log:printError("Failed to resolve current date.", civilTime);
-        return <HttpInternalServerError>{body: {message: "Failed to resolve the current date."}};
-    }
-    return [year ?: civilTime.year, month ?: civilTime.month];
-}
-
-isolated function normalizeBusinessUnit(string? businessUnit) returns string? {
-    if businessUnit is string &&
-            (businessUnit.trim().length() == 0 || businessUnit == "All Business Units") {
-        return ();
-    }
-    return businessUnit;
-}
-
-isolated function fetchNameMap(string[] emails) returns map<string> {
-    map<string>|error hrNames = entity:fetchEmployeeNameMap(emails);
-    return hrNames is map<string> ? hrNames : {};
-}
-
-isolated function validateDateParams(int? year, int? month, int monthRange) returns http:BadRequest? {
-    if year is int && (year < 1970 || year > 2100) {
-        return <http:BadRequest>{body: {message: "Invalid year. Expected a value between 1970 and 2100."}};
-    }
-    if month is int && (month < 1 || month > 12) {
-        return <http:BadRequest>{body: {message: "Invalid month. Expected a value between 1 and 12."}};
-    }
-    if monthRange < 0 || monthRange > 36 {
-        return <http:BadRequest>{body: {message: "monthRange must be between 0 and 36."}};
-    }
-    return ();
-}
-
-isolated function maskCardNumber(string cardNumber) returns string {
-    string digits = re `\D`.replaceAll(cardNumber, "");
-    if digits.length() < 4 {
-        return "**** **** **** ****";
-    }
-    string last4 = digits.substring(digits.length() - 4);
-    return string `**** **** **** ${last4}`;
-}
-
-function buildEffectiveAppConfig() returns AppConfig {
-    map<string>|error dbSettings = database:getAppSettings();
-    if dbSettings is error {
-        log:printWarn("Could not read app_settings from DB; using Config.toml defaults.", dbSettings);
-        return appConfig;
-    }
-
-    decimal claimLimit = appConfig.claimLimit;
-    decimal claimRangeStep = appConfig.claimRangeStep;
-    int lastYearClaimGracePeriodInDays = appConfig.lastYearClaimGracePeriodInDays;
-    string[] submissionsAllowedLocations = appConfig.submissionsAllowedLocations;
-
-    string? rawLimit = dbSettings["claimLimit"];
-    if rawLimit is string {
-        decimal|error v = decimal:fromString(rawLimit);
-        if v is decimal && v > 0.0d {
-            claimLimit = v;
-        } else {
-            log:printWarn("Ignoring invalid claimLimit from DB; keeping default.", val = rawLimit);
-        }
-    }
-
-    string? rawStep = dbSettings["claimRangeStep"];
-    if rawStep is string {
-        decimal|error v = decimal:fromString(rawStep);
-        if v is decimal && v > 0.0d {
-            claimRangeStep = v;
-        } else {
-            log:printWarn("Ignoring invalid claimRangeStep from DB; keeping default.", val = rawStep);
-        }
-    }
-
-    string? rawGrace = dbSettings["lastYearClaimGracePeriodInDays"];
-    if rawGrace is string {
-        int|error v = int:fromString(rawGrace);
-        if v is int && v >= 0 {
-            lastYearClaimGracePeriodInDays = v;
-        } else {
-            log:printWarn("Ignoring invalid lastYearClaimGracePeriodInDays from DB; keeping default.", val = rawGrace);
-        }
-    }
-
-    string? rawLocations = dbSettings["submissionsAllowedLocations"];
-    if rawLocations is string && rawLocations.length() > 0 {
-        string[] parsed = from string part in re `,`.split(rawLocations)
-            let string t = part.trim()
-            where t.length() > 0
-            select t;
-        if parsed.length() > 0 {
-            submissionsAllowedLocations = parsed;
-        } else {
-            log:printWarn("Ignoring empty submissionsAllowedLocations from DB; keeping default.", val = rawLocations);
-        }
-    }
-
-    return {claimLimit, claimRangeStep, lastYearClaimGracePeriodInDays, submissionsAllowedLocations};
-}
 
 service class ErrorInterceptor {
     *http:ResponseErrorInterceptor;
